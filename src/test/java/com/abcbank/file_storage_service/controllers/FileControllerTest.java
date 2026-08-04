@@ -7,9 +7,9 @@ import com.abcbank.file_storage_service.services.StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -31,7 +31,7 @@ class FileControllerTest {
 
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
     private StorageService storageService;
 
     @BeforeEach
@@ -102,7 +102,7 @@ class FileControllerTest {
         ByteArrayResource resource = new ByteArrayResource("Hello World".getBytes());
 
         Mockito.when(storageService.findById(1L)).thenReturn(stored);
-        Mockito.when(storageService.loadAsResource(1L)).thenReturn(resource);
+        Mockito.when(storageService.loadAsResource(stored)).thenReturn(resource);
 
         mockMvc.perform(get("/api/files/download/1"))
                 .andExpect(status().isOk())

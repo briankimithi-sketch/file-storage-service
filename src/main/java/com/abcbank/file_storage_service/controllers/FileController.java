@@ -37,13 +37,17 @@ public class FileController {
 
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> download(@PathVariable Long id) {
-        StoredFile stored = service.findById(id); // metadata from DB
-        Resource file = service.loadAsResource(id); // actual file from disk
+        StoredFile stored = service.findById(id);
+        Resource file = service.loadAsResource(stored);
+        String contentType = stored.getContentType();
+        if (contentType == null || contentType.isBlank()) {
+            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + stored.getOriginalName() + "\"")
-                .contentType(MediaType.parseMediaType(stored.getContentType()))
+                .contentType(MediaType.parseMediaType(contentType))
                 .body(file);
     }
 

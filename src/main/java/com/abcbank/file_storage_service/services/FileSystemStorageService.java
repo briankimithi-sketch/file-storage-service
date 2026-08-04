@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -67,10 +68,12 @@ public class FileSystemStorageService implements StorageService {
     }
 
     @Override
-    public Resource loadAsResource(Long id) {
-        StoredFile stored = repository.findById(id)
-                .orElseThrow(() -> new FileNotFoundException(id));
-        return new FileSystemResource(stored.getFilePath());
+    public Resource loadAsResource(StoredFile storedFile) {
+        Path file = Paths.get(storedFile.getFilePath());
+        if (!Files.exists(file)) {
+            throw new FileNotFoundException(storedFile.getId());
+        }
+        return new FileSystemResource(file);
     }
 
     @Override

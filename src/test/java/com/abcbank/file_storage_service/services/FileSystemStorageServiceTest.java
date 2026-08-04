@@ -83,9 +83,7 @@ class FileSystemStorageServiceTest {
         stored.setId(1L);
         stored.setFilePath(filePath.toString());
 
-        when(repository.findById(1L)).thenReturn(Optional.of(stored));
-
-        Resource resource = storageService.loadAsResource(1L);
+        Resource resource = storageService.loadAsResource(stored);
 
         assertThat(resource.exists()).isTrue();
         assertThat(resource.getFile().getName()).contains("test");
@@ -94,9 +92,11 @@ class FileSystemStorageServiceTest {
     
     @Test
     void testLoadAsResourceFileNotFound() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        StoredFile stored = new StoredFile();
+        stored.setId(99L);
+        stored.setFilePath(testRoot.resolve("missing.txt").toString());
 
-        assertThrows(FileNotFoundException.class, () -> storageService.loadAsResource(99L));
+        assertThrows(FileNotFoundException.class, () -> storageService.loadAsResource(stored));
     }
 
     

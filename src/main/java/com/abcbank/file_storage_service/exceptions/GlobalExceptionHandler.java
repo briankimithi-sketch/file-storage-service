@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.io.IOException;
 import java.util.Map;
 
 @ControllerAdvice
@@ -35,7 +36,14 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleMaxSize(MaxUploadSizeExceededException ex) {
-        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE) 
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE) 
                 .body(Map.of("error", "File size exceeds limit"));
+    }
+
+    
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<Map<String, String>> handleIOException(IOException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "An I/O error occurred"));
     }
 }

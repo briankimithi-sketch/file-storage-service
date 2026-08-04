@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface StorageService {
     StoredFile store(MultipartFile file) throws IOException;
-    Resource loadAsResource(Long fileId);
+    Resource loadAsResource(StoredFile storedFile);
     void delete(Long fileId) throws IOException;
     List<StoredFile> findAll();
     StoredFile findById(Long fileId);
