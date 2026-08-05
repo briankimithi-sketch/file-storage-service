@@ -1,4 +1,4 @@
-package com.abcbank.file_storage_service.exceptions;
+package com.abcbank.filestorage.exceptions;
 
 public class FileNotFoundException extends RuntimeException {
     public FileNotFoundException(Long id) {

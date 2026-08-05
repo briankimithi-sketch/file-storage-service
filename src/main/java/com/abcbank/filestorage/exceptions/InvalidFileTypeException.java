@@ -1,4 +1,4 @@
-package com.abcbank.file_storage_service.exceptions;
+package com.abcbank.filestorage.exceptions;
 
 import java.util.List;
 

@@ -1,5 +1,5 @@
 
-package com.abcbank.file_storage_service;
+package com.abcbank.filestorage;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -1,9 +1,9 @@
-package com.abcbank.file_storage_service.controllers;
+package com.abcbank.filestorage.controllers;
 
-import com.abcbank.file_storage_service.entities.StoredFile;
-import com.abcbank.file_storage_service.exceptions.FileNotFoundException;
-import com.abcbank.file_storage_service.exceptions.InvalidFileTypeException;
-import com.abcbank.file_storage_service.services.StorageService;
+import com.abcbank.filestorage.entities.StoredFile;
+import com.abcbank.filestorage.exceptions.FileNotFoundException;
+import com.abcbank.filestorage.exceptions.InvalidFileTypeException;
+import com.abcbank.filestorage.services.StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

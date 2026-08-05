@@ -1,8 +1,8 @@
 
-package com.abcbank.file_storage_service.controllers;
+package com.abcbank.filestorage.controllers;
 
-import com.abcbank.file_storage_service.entities.StoredFile;
-import com.abcbank.file_storage_service.services.StorageService;
+import com.abcbank.filestorage.entities.StoredFile;
+import com.abcbank.filestorage.services.StorageService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

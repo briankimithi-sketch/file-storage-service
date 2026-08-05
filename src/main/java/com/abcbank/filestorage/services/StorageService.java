@@ -1,6 +1,6 @@
-package com.abcbank.file_storage_service.services;
+package com.abcbank.filestorage.services;
 
-import com.abcbank.file_storage_service.entities.StoredFile;
+import com.abcbank.filestorage.entities.StoredFile;
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
 
