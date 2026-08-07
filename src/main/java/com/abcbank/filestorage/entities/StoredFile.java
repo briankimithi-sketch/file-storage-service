@@ -16,18 +16,18 @@ public class StoredFile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // JPA manages this, so no @NonNull
+    private Long id;
 
     @Column(nullable = false)
-    private String originalName; // required
+    private String originalName; 
 
     @Column(nullable = false)
-    private String contentType;  // required
+    private String contentType;  
 
-    private long size; // primitive avoids null issues
+    private long size; 
 
     @Column(nullable = false)
-    private String filePath; // required
+    private String filePath; 
 
     private LocalDateTime createdOn = LocalDateTime.now();
 }
