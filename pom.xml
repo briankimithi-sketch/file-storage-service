@@ -94,6 +94,26 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Redis Caching -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+
+<!-- RabbitMQ Messaging -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-amqp</artifactId>
+</dependency>
+
+<!-- Embedded Redis for tests (optional integration) -->
+<dependency>
+    <groupId>it.ozimov</groupId>
+    <artifactId>embedded-redis</artifactId>
+    <version>0.7.3</version>
+    <scope>test</scope>
+</dependency>
+
     </dependencies>
 
     <build>

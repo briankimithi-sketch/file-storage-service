@@ -1,4 +1,3 @@
-
 package com.abcbank.filestorage.controllers;
 
 import com.abcbank.filestorage.entities.StoredFile;
@@ -17,15 +16,15 @@ import java.util.Map;
 @RequestMapping("/api/files")
 public class FileController {
 
-    private final StorageService service;
+    private final StorageService storageService;
 
-    public FileController(StorageService service) {
-        this.service = service;
+    public FileController(StorageService storageService) {
+        this.storageService = storageService;
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file) throws IOException {
-        StoredFile stored = service.store(file);
+    public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) throws IOException {
+        StoredFile stored = storageService.store(file);
         Map<String, Object> response = Map.of(
                 "id", stored.getId(),
                 "originalName", stored.getOriginalName(),
@@ -37,8 +36,9 @@ public class FileController {
 
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> download(@PathVariable Long id) {
-        StoredFile stored = service.findById(id);
-        Resource file = service.loadAsResource(stored);
+        StoredFile stored = storageService.findById(id);
+        Resource resource = storageService.loadAsResource(stored);
+
         String contentType = stored.getContentType();
         if (contentType == null || contentType.isBlank()) {
             contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
@@ -48,12 +48,31 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + stored.getOriginalName() + "\"")
                 .contentType(MediaType.parseMediaType(contentType))
-                .body(file);
+                .body(resource);
+    }
+
+    @GetMapping("/view/{filename:.+}")
+    public ResponseEntity<Resource> view(@PathVariable String filename) {
+        StoredFile stored = storageService.findByOriginalName(filename)
+                .orElseThrow(() -> new RuntimeException("File not found"));
+
+        Resource resource = storageService.loadAsResource(stored);
+
+        String contentType = stored.getContentType();
+        if (contentType == null || contentType.isBlank()) {
+            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + stored.getOriginalName() + "\"")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(resource);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) throws IOException {
-        service.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id) throws IOException {
+        storageService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
