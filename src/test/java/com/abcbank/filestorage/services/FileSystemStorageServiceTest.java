@@ -33,7 +33,6 @@ class FileSystemStorageServiceTest {
         storageService = new FileSystemStorageService(repository, testRoot.toString());
     }
 
-    
     @Test
     void testStoreFile() throws IOException {
         MockMultipartFile file = new MockMultipartFile(
@@ -55,7 +54,6 @@ class FileSystemStorageServiceTest {
         verify(repository, times(1)).save(any(StoredFile.class));
     }
 
-    
     @Test
     void testStoreEmptyFileThrowsException() {
         MockMultipartFile emptyFile = new MockMultipartFile(
@@ -65,7 +63,6 @@ class FileSystemStorageServiceTest {
         assertThrows(IllegalArgumentException.class, () -> storageService.store(emptyFile));
     }
 
-    
     @Test
     void testStoreInvalidFileTypeThrowsException() {
         MockMultipartFile file = new MockMultipartFile(
@@ -75,12 +72,11 @@ class FileSystemStorageServiceTest {
         assertThrows(InvalidFileTypeException.class, () -> storageService.store(file));
     }
 
-    
     @Test
     void testLoadAsResource() throws IOException {
         Path filePath = Files.createTempFile(testRoot, "test", ".txt");
         StoredFile stored = new StoredFile();
-        stored.setId(1L);
+        stored.setOriginalName("test.txt");
         stored.setFilePath(filePath.toString());
 
         Resource resource = storageService.loadAsResource(stored);
@@ -89,66 +85,59 @@ class FileSystemStorageServiceTest {
         assertThat(resource.getFile().getName()).contains("test");
     }
 
-    
     @Test
     void testLoadAsResourceFileNotFound() {
         StoredFile stored = new StoredFile();
-        stored.setId(99L);
+        stored.setOriginalName("missing.txt");
         stored.setFilePath(testRoot.resolve("missing.txt").toString());
 
         assertThrows(FileNotFoundException.class, () -> storageService.loadAsResource(stored));
     }
 
-    
     @Test
-    void testDeleteFile() throws IOException {
+    void testDeleteFileByFilename() throws IOException {
         Path filePath = Files.createTempFile(testRoot, "delete", ".txt");
         StoredFile stored = new StoredFile();
-        stored.setId(1L);
+        stored.setOriginalName("delete.txt");
         stored.setFilePath(filePath.toString());
 
-        when(repository.findById(1L)).thenReturn(Optional.of(stored));
+        when(repository.findByOriginalName("delete.txt")).thenReturn(Optional.of(stored));
 
-        storageService.delete(1L);
+        storageService.deleteByFilename("delete.txt");
 
         assertThat(Files.exists(filePath)).isFalse();
         verify(repository, times(1)).delete(stored);
     }
 
-    
     @Test
-    void testDeleteFileNotFound() {
-        when(repository.findById(42L)).thenReturn(Optional.empty());
+    void testDeleteFileByFilenameNotFound() {
+        when(repository.findByOriginalName("missing.txt")).thenReturn(Optional.empty());
 
-        assertThrows(FileNotFoundException.class, () -> storageService.delete(42L));
+        assertThrows(FileNotFoundException.class, () -> storageService.deleteByFilename("missing.txt"));
     }
 
-    
     @Test
-    void testFindById() {
+    void testFindByOriginalName() {
         StoredFile stored = new StoredFile();
-        stored.setId(1L);
         stored.setOriginalName("hello.txt");
 
-        when(repository.findById(1L)).thenReturn(Optional.of(stored));
+        when(repository.findByOriginalName("hello.txt")).thenReturn(Optional.of(stored));
 
-        StoredFile result = storageService.findById(1L);
+        StoredFile result = storageService.findByOriginalNameOrThrow("hello.txt");
 
         assertThat(result.getOriginalName()).isEqualTo("hello.txt");
     }
 
-    
     @Test
-    void testFindByIdNotFound() {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+    void testFindByOriginalNameNotFound() {
+        when(repository.findByOriginalName("missing.txt")).thenReturn(Optional.empty());
 
-        assertThrows(FileNotFoundException.class, () -> storageService.findById(99L));
+        assertThrows(FileNotFoundException.class, () -> storageService.findByOriginalNameOrThrow("missing.txt"));
     }
 
     @Test
     void testFindAll() {
         StoredFile stored = new StoredFile();
-        stored.setId(1L);
         stored.setOriginalName("hello.txt");
 
         when(repository.findAll()).thenReturn(List.of(stored));
@@ -159,4 +148,3 @@ class FileSystemStorageServiceTest {
         assertThat(result.get(0).getOriginalName()).isEqualTo("hello.txt");
     }
 }
-

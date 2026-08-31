@@ -36,25 +36,19 @@ public class FileSystemStorageService implements StorageService {
             StoredFileRepository repository,
             @Value("${filestorage.root:uploads}") String rootDir
     ) throws IOException {
-
         this.repository = repository;
-
-        this.root = Paths.get(System.getProperty("user.dir"))
-                .resolve(rootDir);
-
+        this.root = Paths.get(System.getProperty("user.dir")).resolve(rootDir);
         Files.createDirectories(root);
     }
 
     @Override
     @CacheEvict(value = {"files", "filesByOriginalName"}, allEntries = true)
     public StoredFile store(MultipartFile file) throws IOException {
-
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Cannot store empty file");
         }
 
         String originalName = file.getOriginalFilename();
-
         if (originalName == null || !isAllowedExtension(originalName)) {
             throw new InvalidFileTypeException(originalName, ALLOWED_EXTENSIONS);
         }
@@ -72,9 +66,7 @@ public class FileSystemStorageService implements StorageService {
         stored.setFilePath(destination.toString());
         stored.setCreatedOn(LocalDateTime.now());
 
-        StoredFile savedFile = repository.save(stored);
-
-        return savedFile;
+        return repository.save(stored);
     }
 
     private boolean isAllowedExtension(String filename) {
@@ -88,20 +80,19 @@ public class FileSystemStorageService implements StorageService {
     public Resource loadAsResource(StoredFile storedFile) {
         Path filePath = Paths.get(storedFile.getFilePath());
         if (!Files.exists(filePath)) {
-            throw new FileNotFoundException(storedFile.getId());
+            throw new FileNotFoundException(storedFile.getOriginalName());
         }
         return new FileSystemResource(filePath);
     }
 
     @Override
     @CacheEvict(value = {"files", "filesByOriginalName"}, allEntries = true)
-    public void delete(Long id) throws IOException {
-        StoredFile stored = repository.findById(id)
-                .orElseThrow(() -> new FileNotFoundException(id));
+    public void deleteByFilename(String filename) throws IOException {
+        StoredFile stored = repository.findByOriginalName(filename)
+                .orElseThrow(() -> new FileNotFoundException(filename));
 
         Files.deleteIfExists(Paths.get(stored.getFilePath()));
         repository.delete(stored);
-
     }
 
     @Override
@@ -110,14 +101,13 @@ public class FileSystemStorageService implements StorageService {
     }
 
     @Override
-    @Cacheable(value = "files", key = "#id")
-    public StoredFile findById(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new FileNotFoundException(id));
+    @Cacheable(value = "filesByOriginalName", key = "#filename")
+    public StoredFile findByOriginalNameOrThrow(String filename) {
+        return repository.findByOriginalName(filename)
+                .orElseThrow(() -> new FileNotFoundException(filename));
     }
 
     @Override
-    @Cacheable(value = "filesByOriginalName", key = "#filename")
     public Optional<StoredFile> findByOriginalName(String filename) {
         return repository.findByOriginalName(filename);
     }

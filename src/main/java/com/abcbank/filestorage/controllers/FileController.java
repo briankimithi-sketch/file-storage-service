@@ -22,21 +22,23 @@ public class FileController {
         this.storageService = storageService;
     }
 
+    // Upload file
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) throws IOException {
         StoredFile stored = storageService.store(file);
         Map<String, Object> response = Map.of(
-                "id", stored.getId(),
                 "originalName", stored.getOriginalName(),
                 "size", stored.getSize(),
-                "downloadUrl", "/api/files/download/" + stored.getId()
+                "downloadUrl", "/api/files/download/" + stored.getOriginalName(),
+                "viewUrl", "/api/files/view/" + stored.getOriginalName()
         );
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/download/{id}")
-    public ResponseEntity<Resource> download(@PathVariable Long id) {
-        StoredFile stored = storageService.findById(id);
+    // Download by filename (forces download)
+    @GetMapping("/download/{filename:.+}")
+    public ResponseEntity<Resource> download(@PathVariable String filename) {
+        StoredFile stored = storageService.findByOriginalNameOrThrow(filename);
         Resource resource = storageService.loadAsResource(stored);
 
         String contentType = stored.getContentType();
@@ -51,11 +53,10 @@ public class FileController {
                 .body(resource);
     }
 
+    // Inline view by filename (browser displays)
     @GetMapping("/view/{filename:.+}")
     public ResponseEntity<Resource> view(@PathVariable String filename) {
-        StoredFile stored = storageService.findByOriginalName(filename)
-                .orElseThrow(() -> new RuntimeException("File not found"));
-
+        StoredFile stored = storageService.findByOriginalNameOrThrow(filename);
         Resource resource = storageService.loadAsResource(stored);
 
         String contentType = stored.getContentType();
@@ -70,9 +71,10 @@ public class FileController {
                 .body(resource);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) throws IOException {
-        storageService.delete(id);
+    // Delete by filename
+    @DeleteMapping("/{filename:.+}")
+    public ResponseEntity<Void> delete(@PathVariable String filename) throws IOException {
+        storageService.deleteByFilename(filename);
         return ResponseEntity.noContent().build();
     }
 }

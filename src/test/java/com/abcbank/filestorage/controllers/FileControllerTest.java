@@ -46,7 +46,6 @@ class FileControllerTest {
         );
 
         StoredFile stored = new StoredFile();
-        stored.setId(1L);
         stored.setOriginalName("hello.txt");
         stored.setContentType("text/plain");
         stored.setSize(11);
@@ -56,10 +55,10 @@ class FileControllerTest {
 
         mockMvc.perform(multipart("/api/files/upload").file(file))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.originalName").value("hello.txt"))
                 .andExpect(jsonPath("$.size").value(11))
-                .andExpect(jsonPath("$.downloadUrl").value("/api/files/download/1"));
+                .andExpect(jsonPath("$.downloadUrl").value("/api/files/download/hello.txt"))
+                .andExpect(jsonPath("$.viewUrl").value("/api/files/view/hello.txt"));
     }
 
     @Test
@@ -93,7 +92,6 @@ class FileControllerTest {
     @Test
     void testDownloadFile() throws Exception {
         StoredFile stored = new StoredFile();
-        stored.setId(1L);
         stored.setOriginalName("hello.txt");
         stored.setContentType("text/plain");
         stored.setSize(11);
@@ -101,10 +99,11 @@ class FileControllerTest {
 
         ByteArrayResource resource = new ByteArrayResource("Hello World".getBytes());
 
-        Mockito.when(storageService.findById(1L)).thenReturn(stored);
+        // FIX: mock findByOriginalNameOrThrow
+        Mockito.when(storageService.findByOriginalNameOrThrow("hello.txt")).thenReturn(stored);
         Mockito.when(storageService.loadAsResource(stored)).thenReturn(resource);
 
-        mockMvc.perform(get("/api/files/download/1"))
+        mockMvc.perform(get("/api/files/download/hello.txt"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"hello.txt\""))
                 .andExpect(content().contentType(MediaType.TEXT_PLAIN))
@@ -113,28 +112,30 @@ class FileControllerTest {
 
     @Test
     void testDownloadFileNotFound() throws Exception {
-        Mockito.when(storageService.findById(99L))
-                .thenThrow(new FileNotFoundException(99L));
+        // FIX: mock findByOriginalNameOrThrow to throw
+        Mockito.when(storageService.findByOriginalNameOrThrow("missing.txt"))
+                .thenThrow(new FileNotFoundException("missing.txt"));
 
-        mockMvc.perform(get("/api/files/download/99"))
+        mockMvc.perform(get("/api/files/download/missing.txt"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("File not found with id 99"));
+                .andExpect(jsonPath("$.error").value("File not found with filename: missing.txt"));
     }
 
     @Test
     void testDeleteFile() throws Exception {
-        Mockito.doNothing().when(storageService).delete(1L);
+        Mockito.doNothing().when(storageService).deleteByFilename("hello.txt");
 
-        mockMvc.perform(delete("/api/files/1"))
+        mockMvc.perform(delete("/api/files/hello.txt"))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void testDeleteFileNotFound() throws Exception {
-        Mockito.doThrow(new FileNotFoundException(42L)).when(storageService).delete(42L);
+        Mockito.doThrow(new FileNotFoundException("missing.txt"))
+                .when(storageService).deleteByFilename("missing.txt");
 
-        mockMvc.perform(delete("/api/files/42"))
+        mockMvc.perform(delete("/api/files/missing.txt"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("File not found with id 42"));
+                .andExpect(jsonPath("$.error").value("File not found with filename: missing.txt"));
     }
 }

@@ -21,9 +21,9 @@ public interface StorageService {
     Resource loadAsResource(StoredFile storedFile);
 
     /**
-     * Delete a file by its ID.
+     * Delete a file by its original filename.
      */
-    void delete(Long fileId) throws IOException;
+    void deleteByFilename(String filename) throws IOException;
 
     /**
      * Find all stored files.
@@ -31,12 +31,12 @@ public interface StorageService {
     List<StoredFile> findAll();
 
     /**
-     * Find a file by its ID.
-     */
-    StoredFile findById(Long fileId);
-
-    /**
      * Find a file by its original filename.
      */
     Optional<StoredFile> findByOriginalName(String filename);
+
+    /**
+     * Find a file by its original filename or throw if not found.
+     */
+    StoredFile findByOriginalNameOrThrow(String filename);
 }

@@ -1,7 +1,8 @@
 package com.abcbank.filestorage.exceptions;
 
 public class FileNotFoundException extends RuntimeException {
-    public FileNotFoundException(Long id) {
-        super("File not found with id " + id);
+
+    public FileNotFoundException(String filename) {
+        super("File not found with filename: " + filename);
     }
 }
