@@ -63,7 +63,6 @@ public class FileSystemStorageService implements StorageService {
         stored.setOriginalName(originalName);
         stored.setContentType(file.getContentType());
         stored.setSize(file.getSize());
-        stored.setFilePath(destination.toString());
         stored.setCreatedOn(LocalDateTime.now());
 
         return repository.save(stored);
