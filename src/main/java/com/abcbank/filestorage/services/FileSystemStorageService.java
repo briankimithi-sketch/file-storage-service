@@ -66,10 +66,10 @@ public class FileSystemStorageService implements StorageService {
         stored.setSize(file.getSize());
         stored.setCreatedOn(LocalDateTime.now());
 
-        // ✅ Build simplified URLs
+       
         String downloadUrl = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
-                .path("/files/download/")
+                .path("/files/")
                 .path(originalName)
                 .toUriString();
 
@@ -128,3 +128,4 @@ public class FileSystemStorageService implements StorageService {
         return repository.findByOriginalName(filename);
     }
 }
+eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ6NjVJT3ZXNEFwN0xMbVN6LU53dFZzeXV5emtkMUhHVTJuX2Jwd0FSeUpNIn0.eyJleHAiOjE3ODgyNjQ0OTYsImlhdCI6MTc4ODI0NjQ5NiwianRpIjoiOWU0N2I5MDEtYjU0OC00ZjYxLTg1ZGUtOTRmZDljZTkyZDBmIiwiaXNzIjoiaHR0cHM6Ly9rZXljbG9ha3VhdC5hYmN0aGViYW5rLmNvbTo4MDk5L3JlYWxtcy9GaWxlU3RvcmFnZSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiJhZDU4YjE1NC04YTVkLTQwZjUtOTAzOS00ZTVkYTFhMjkyMzciLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmaWxlLXN0b3JhZ2UtY2xpZW50Iiwic2Vzc2lvbl9zdGF0ZSI6IjM3MDMwZTE2LTE2ZWItNDhhMS1hYzJmLTkyMTUzMTgwMWM1YiIsImFjciI6IjEiLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiZGVmYXVsdC1yb2xlcy1maWxlc3RvcmFnZSIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6ImVtYWlsIHByb2ZpbGUiLCJzaWQiOiIzNzAzMGUxNi0xNmViLTQ4YTEtYWMyZi05MjE1MzE4MDFjNWIiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsInByZWZlcnJlZF91c2VybmFtZSI6ImFwaWNhbGxlciIsImdpdmVuX25hbWUiOiIiLCJmYW1pbHlfbmFtZSI6IiJ9.LsNksjWg-1WlB8dNOaOuvjGwlK4o4V6JO0jsO3ZtuoD0IWfT32pJhxE8qbj96ScpH6fgtIBRBXHy1O1PHFvcOvcQ2V79ZV4vHAastF92y67m9xgAborRsPSAcrl9IR1y1jv-jsX5--cS7eCrCWPZrhetmQxrs7-JdgWH0AZYyGR96-SccIy8CRFjhBp5Aht5PH8nr1O_EtmeJmZjINAxPYH4NgYRClglCNOYKSFN7TRz9r6vnPlWFabcwH9XatQjb90cP77zli_Q4G9j9_1S8LIVk-3Zai01Nc1awtEROMJv9f51QKWpXRskn1y4uu0gKMfiuzRoqn3tvaoXNHTfiQ
