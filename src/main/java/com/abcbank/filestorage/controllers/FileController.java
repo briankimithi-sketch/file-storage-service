@@ -30,7 +30,7 @@ public class FileController {
 
         String downloadUrl = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
-                .path("/files/download/")
+                .path("/files/")
                 .path(stored.getOriginalName())
                 .toUriString();
 
