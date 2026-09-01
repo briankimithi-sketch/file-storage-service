@@ -19,15 +19,22 @@ public class StoredFile {
     private Long id;
 
     @Column(nullable = false)
-    private String originalName; 
+    private String originalName;
 
     @Column(nullable = false)
-    private String contentType;  
+    private String contentType;
 
-    private long size; 
+    private long size;
 
     @Column(nullable = false)
-    private String filePath; 
+    private String filePath;
 
     private LocalDateTime createdOn = LocalDateTime.now();
+
+    
+    @Transient
+    private String downloadUrl;
+
+    @Transient
+    private String viewUrl;
 }

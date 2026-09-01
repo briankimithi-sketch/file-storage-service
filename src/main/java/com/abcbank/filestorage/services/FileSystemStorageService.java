@@ -11,6 +11,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -65,6 +66,22 @@ public class FileSystemStorageService implements StorageService {
         stored.setSize(file.getSize());
         stored.setCreatedOn(LocalDateTime.now());
 
+        // ✅ Build simplified URLs
+        String downloadUrl = ServletUriComponentsBuilder
+                .fromCurrentContextPath()
+                .path("/files/download/")
+                .path(originalName)
+                .toUriString();
+
+        String viewUrl = ServletUriComponentsBuilder
+                .fromCurrentContextPath()
+                .path("/files/")
+                .path(originalName)
+                .toUriString();
+
+        stored.setDownloadUrl(downloadUrl);
+        stored.setViewUrl(viewUrl);
+
         return repository.save(stored);
     }
 
@@ -77,7 +94,7 @@ public class FileSystemStorageService implements StorageService {
 
     @Override
     public Resource loadAsResource(StoredFile storedFile) {
-        Path filePath = Paths.get(storedFile.getFilePath());
+        Path filePath = root.resolve(storedFile.getOriginalName());
         if (!Files.exists(filePath)) {
             throw new FileNotFoundException(storedFile.getOriginalName());
         }
@@ -90,7 +107,7 @@ public class FileSystemStorageService implements StorageService {
         StoredFile stored = repository.findByOriginalName(filename)
                 .orElseThrow(() -> new FileNotFoundException(filename));
 
-        Files.deleteIfExists(Paths.get(stored.getFilePath()));
+        Files.deleteIfExists(root.resolve(stored.getOriginalName()));
         repository.delete(stored);
     }
 

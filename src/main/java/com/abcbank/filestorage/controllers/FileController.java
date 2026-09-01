@@ -8,12 +8,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/files") 
 public class FileController {
 
     private final StorageService storageService;
@@ -26,11 +27,24 @@ public class FileController {
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) throws IOException {
         StoredFile stored = storageService.store(file);
+
+        String downloadUrl = ServletUriComponentsBuilder
+                .fromCurrentContextPath()
+                .path("/files/download/")
+                .path(stored.getOriginalName())
+                .toUriString();
+
+        String viewUrl = ServletUriComponentsBuilder
+                .fromCurrentContextPath()
+                .path("/files/")
+                .path(stored.getOriginalName())
+                .toUriString();
+
         Map<String, Object> response = Map.of(
                 "originalName", stored.getOriginalName(),
                 "size", stored.getSize(),
-                "downloadUrl", "/api/files/download/" + stored.getOriginalName(),
-                "viewUrl", "/api/files/view/" + stored.getOriginalName()
+                "downloadUrl", downloadUrl,
+                "viewUrl", viewUrl
         );
         return ResponseEntity.ok(response);
     }
@@ -54,7 +68,7 @@ public class FileController {
     }
 
     // Inline view by filename (browser displays)
-    @GetMapping("/view/{filename:.+}")
+    @GetMapping("/{filename:.+}") 
     public ResponseEntity<Resource> view(@PathVariable String filename) {
         StoredFile stored = storageService.findByOriginalNameOrThrow(filename);
         Resource resource = storageService.loadAsResource(stored);
