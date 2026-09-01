@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/files") 
+@RequestMapping("/files")
 public class FileController {
 
     private final StorageService storageService;
@@ -50,7 +50,7 @@ public class FileController {
     }
 
     // Download by filename (forces download)
-    @GetMapping("/download/{filename:.+}")
+    @GetMapping("/download/{filename}")
     public ResponseEntity<Resource> download(@PathVariable String filename) {
         StoredFile stored = storageService.findByOriginalNameOrThrow(filename);
         Resource resource = storageService.loadAsResource(stored);
@@ -68,7 +68,7 @@ public class FileController {
     }
 
     // Inline view by filename (browser displays)
-    @GetMapping("/{filename:.+}") 
+    @GetMapping("/{filename}")   // ⚠️ changed from {filename:.+}
     public ResponseEntity<Resource> view(@PathVariable String filename) {
         StoredFile stored = storageService.findByOriginalNameOrThrow(filename);
         Resource resource = storageService.loadAsResource(stored);
@@ -86,7 +86,7 @@ public class FileController {
     }
 
     // Delete by filename
-    @DeleteMapping("/{filename:.+}")
+    @DeleteMapping("/{filename}")
     public ResponseEntity<Void> delete(@PathVariable String filename) throws IOException {
         storageService.deleteByFilename(filename);
         return ResponseEntity.noContent().build();

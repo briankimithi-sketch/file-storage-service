@@ -29,7 +29,6 @@ public class FileSystemStorageService implements StorageService {
     private final Path root;
     private final StoredFileRepository repository;
 
-    // Allowed file extensions
     private static final List<String> ALLOWED_EXTENSIONS =
             List.of("txt", "pdf", "jpg", "png");
 
@@ -55,9 +54,9 @@ public class FileSystemStorageService implements StorageService {
         }
 
         String ext = originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase();
-        String filename = UUID.randomUUID() + "." + ext;
+        String uuidFilename = UUID.randomUUID() + "." + ext;
 
-        Path destination = root.resolve(filename);
+        Path destination = root.resolve(uuidFilename);
         Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
 
         StoredFile stored = new StoredFile();
@@ -65,8 +64,8 @@ public class FileSystemStorageService implements StorageService {
         stored.setContentType(file.getContentType());
         stored.setSize(file.getSize());
         stored.setCreatedOn(LocalDateTime.now());
+        stored.setFilePath(destination.toString()); // ✅ Save actual disk path
 
-       
         String downloadUrl = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
                 .path("/files/")
@@ -94,7 +93,7 @@ public class FileSystemStorageService implements StorageService {
 
     @Override
     public Resource loadAsResource(StoredFile storedFile) {
-        Path filePath = root.resolve(storedFile.getOriginalName());
+        Path filePath = Paths.get(storedFile.getFilePath()); // ✅ Use filePath
         if (!Files.exists(filePath)) {
             throw new FileNotFoundException(storedFile.getOriginalName());
         }
@@ -107,7 +106,7 @@ public class FileSystemStorageService implements StorageService {
         StoredFile stored = repository.findByOriginalName(filename)
                 .orElseThrow(() -> new FileNotFoundException(filename));
 
-        Files.deleteIfExists(root.resolve(stored.getOriginalName()));
+        Files.deleteIfExists(Paths.get(stored.getFilePath())); // ✅ Use filePath
         repository.delete(stored);
     }
 

@@ -22,7 +22,10 @@ public class SecurityConfig {
             // Define which endpoints are public vs protected
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/files/**",        // all file endpoints are public
+                    "/",                
+                    
+                                        // root path is public now
+                    "/files/**",        // file endpoints are public
                     "/public/api/v1/**",// token fetch endpoint
                     "/v3/api-docs/**",  // OpenAPI docs
                     "/swagger-ui/**"    // Swagger UI
