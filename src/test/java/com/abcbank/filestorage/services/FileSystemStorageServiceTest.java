@@ -9,6 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,16 +38,25 @@ class FileSystemStorageServiceTest {
     }
 
     @Test
-    void testStoreFile() throws IOException {
+    void testStoreFileBuildsUrls() throws IOException {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "hello.txt", "text/plain", "Hello World".getBytes()
         );
+
+        // ✅ Bind a mock request so ServletUriComponentsBuilder works
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getScheme()).thenReturn("http");
+        when(request.getServerName()).thenReturn("localhost");
+        when(request.getServerPort()).thenReturn(8080);
+        when(request.getContextPath()).thenReturn("");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
         StoredFile saved = new StoredFile();
         saved.setOriginalName("hello.txt");
         saved.setContentType("text/plain");
         saved.setSize(11);
-        saved.setFilePath(testRoot.resolve("uuid.txt").toString());
+        saved.setDownloadUrl("http://localhost/files/hello.txt");
+        saved.setViewUrl("http://localhost/files/hello.txt");
 
         when(repository.save(any(StoredFile.class))).thenReturn(saved);
 
@@ -51,6 +64,8 @@ class FileSystemStorageServiceTest {
 
         assertThat(result.getOriginalName()).isEqualTo("hello.txt");
         assertThat(result.getSize()).isEqualTo(11);
+        assertThat(result.getDownloadUrl()).isEqualTo("http://localhost/files/hello.txt");
+        assertThat(result.getViewUrl()).isEqualTo("http://localhost/files/hello.txt");
         verify(repository, times(1)).save(any(StoredFile.class));
     }
 
@@ -74,7 +89,10 @@ class FileSystemStorageServiceTest {
 
     @Test
     void testLoadAsResource() throws IOException {
-        Path filePath = Files.createTempFile(testRoot, "test", ".txt");
+        // ✅ Create file with exact name
+        Path filePath = testRoot.resolve("test.txt");
+        Files.writeString(filePath, "Hello World");
+
         StoredFile stored = new StoredFile();
         stored.setOriginalName("test.txt");
         stored.setFilePath(filePath.toString());
@@ -82,7 +100,7 @@ class FileSystemStorageServiceTest {
         Resource resource = storageService.loadAsResource(stored);
 
         assertThat(resource.exists()).isTrue();
-        assertThat(resource.getFile().getName()).contains("test");
+        assertThat(resource.getFile().getName()).isEqualTo("test.txt");
     }
 
     @Test
@@ -96,7 +114,10 @@ class FileSystemStorageServiceTest {
 
     @Test
     void testDeleteFileByFilename() throws IOException {
-        Path filePath = Files.createTempFile(testRoot, "delete", ".txt");
+        // ✅ Create file with exact name
+        Path filePath = testRoot.resolve("delete.txt");
+        Files.writeString(filePath, "to be deleted");
+
         StoredFile stored = new StoredFile();
         stored.setOriginalName("delete.txt");
         stored.setFilePath(filePath.toString());
@@ -120,12 +141,13 @@ class FileSystemStorageServiceTest {
     void testFindByOriginalName() {
         StoredFile stored = new StoredFile();
         stored.setOriginalName("hello.txt");
+        stored.setDownloadUrl("http://localhost/files/hello.txt");
 
         when(repository.findByOriginalName("hello.txt")).thenReturn(Optional.of(stored));
 
         StoredFile result = storageService.findByOriginalNameOrThrow("hello.txt");
 
-        assertThat(result.getOriginalName()).isEqualTo("hello.txt");
+        assertThat(result.getDownloadUrl()).isEqualTo("http://localhost/files/hello.txt");
     }
 
     @Test
@@ -139,12 +161,13 @@ class FileSystemStorageServiceTest {
     void testFindAll() {
         StoredFile stored = new StoredFile();
         stored.setOriginalName("hello.txt");
+        stored.setDownloadUrl("http://localhost/files/hello.txt");
 
         when(repository.findAll()).thenReturn(List.of(stored));
 
         List<StoredFile> result = storageService.findAll();
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getOriginalName()).isEqualTo("hello.txt");
+        assertThat(result.get(0).getDownloadUrl()).isEqualTo("http://localhost/files/hello.txt");
     }
 }
