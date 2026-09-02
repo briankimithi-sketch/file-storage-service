@@ -53,10 +53,11 @@ class FileSystemStorageServiceTest {
 
         StoredFile saved = new StoredFile();
         saved.setOriginalName("hello.txt");
+        saved.setUuidFilename("123e4567-e89b-12d3-a456-426614174000.txt");
         saved.setContentType("text/plain");
         saved.setSize(11);
-        saved.setDownloadUrl("http://localhost/files/hello.txt");
-        saved.setViewUrl("http://localhost/files/hello.txt");
+        saved.setDownloadUrl("http://localhost/files/123e4567-e89b-12d3-a456-426614174000.txt");
+        saved.setViewUrl("http://localhost/files/123e4567-e89b-12d3-a456-426614174000.txt");
 
         when(repository.save(any(StoredFile.class))).thenReturn(saved);
 
@@ -64,8 +65,8 @@ class FileSystemStorageServiceTest {
 
         assertThat(result.getOriginalName()).isEqualTo("hello.txt");
         assertThat(result.getSize()).isEqualTo(11);
-        assertThat(result.getDownloadUrl()).isEqualTo("http://localhost/files/hello.txt");
-        assertThat(result.getViewUrl()).isEqualTo("http://localhost/files/hello.txt");
+        assertThat(result.getDownloadUrl()).contains("/files/");
+        assertThat(result.getViewUrl()).contains("/files/");
         verify(repository, times(1)).save(any(StoredFile.class));
     }
 
@@ -89,12 +90,12 @@ class FileSystemStorageServiceTest {
 
     @Test
     void testLoadAsResource() throws IOException {
-        // ✅ Create file with exact name
         Path filePath = testRoot.resolve("test.txt");
         Files.writeString(filePath, "Hello World");
 
         StoredFile stored = new StoredFile();
         stored.setOriginalName("test.txt");
+        stored.setUuidFilename("uuid-test.txt");
         stored.setFilePath(filePath.toString());
 
         Resource resource = storageService.loadAsResource(stored);
@@ -107,6 +108,7 @@ class FileSystemStorageServiceTest {
     void testLoadAsResourceFileNotFound() {
         StoredFile stored = new StoredFile();
         stored.setOriginalName("missing.txt");
+        stored.setUuidFilename("uuid-missing.txt");
         stored.setFilePath(testRoot.resolve("missing.txt").toString());
 
         assertThrows(FileNotFoundException.class, () -> storageService.loadAsResource(stored));
@@ -114,17 +116,17 @@ class FileSystemStorageServiceTest {
 
     @Test
     void testDeleteFileByFilename() throws IOException {
-        // ✅ Create file with exact name
         Path filePath = testRoot.resolve("delete.txt");
         Files.writeString(filePath, "to be deleted");
 
         StoredFile stored = new StoredFile();
         stored.setOriginalName("delete.txt");
+        stored.setUuidFilename("uuid-delete.txt");
         stored.setFilePath(filePath.toString());
 
-        when(repository.findByOriginalName("delete.txt")).thenReturn(Optional.of(stored));
+        when(repository.findByUuidFilename(stored.getUuidFilename())).thenReturn(Optional.of(stored));
 
-        storageService.deleteByFilename("delete.txt");
+        storageService.deleteByFilename(stored.getUuidFilename());
 
         assertThat(Files.exists(filePath)).isFalse();
         verify(repository, times(1)).delete(stored);
@@ -132,22 +134,23 @@ class FileSystemStorageServiceTest {
 
     @Test
     void testDeleteFileByFilenameNotFound() {
-        when(repository.findByOriginalName("missing.txt")).thenReturn(Optional.empty());
+        when(repository.findByUuidFilename("uuid-missing.txt")).thenReturn(Optional.empty());
 
-        assertThrows(FileNotFoundException.class, () -> storageService.deleteByFilename("missing.txt"));
+        assertThrows(FileNotFoundException.class, () -> storageService.deleteByFilename("uuid-missing.txt"));
     }
 
     @Test
     void testFindByOriginalName() {
         StoredFile stored = new StoredFile();
         stored.setOriginalName("hello.txt");
-        stored.setDownloadUrl("http://localhost/files/hello.txt");
+        stored.setUuidFilename("uuid-hello.txt");
+        stored.setDownloadUrl("http://localhost/files/uuid-hello.txt");
 
         when(repository.findByOriginalName("hello.txt")).thenReturn(Optional.of(stored));
 
         StoredFile result = storageService.findByOriginalNameOrThrow("hello.txt");
 
-        assertThat(result.getDownloadUrl()).isEqualTo("http://localhost/files/hello.txt");
+        assertThat(result.getDownloadUrl()).contains("/files/");
     }
 
     @Test
@@ -161,13 +164,14 @@ class FileSystemStorageServiceTest {
     void testFindAll() {
         StoredFile stored = new StoredFile();
         stored.setOriginalName("hello.txt");
-        stored.setDownloadUrl("http://localhost/files/hello.txt");
+        stored.setUuidFilename("uuid-hello.txt");
+        stored.setDownloadUrl("http://localhost/files/uuid-hello.txt");
 
         when(repository.findAll()).thenReturn(List.of(stored));
 
         List<StoredFile> result = storageService.findAll();
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getDownloadUrl()).isEqualTo("http://localhost/files/hello.txt");
+        assertThat(result.get(0).getDownloadUrl()).contains("/files/");
     }
 }

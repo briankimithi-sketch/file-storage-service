@@ -21,9 +21,9 @@ public interface StorageService {
     Resource loadAsResource(StoredFile storedFile);
 
     /**
-     * Delete a file by its original filename.
+     * Delete a file by its UUID filename.
      */
-    void deleteByFilename(String filename) throws IOException;
+    void deleteByFilename(String uuidFilename) throws IOException;
 
     /**
      * Find all stored files.
@@ -32,6 +32,7 @@ public interface StorageService {
 
     /**
      * Find a file by its original filename.
+     * (Legacy support — may return duplicates)
      */
     Optional<StoredFile> findByOriginalName(String filename);
 
@@ -39,4 +40,16 @@ public interface StorageService {
      * Find a file by its original filename or throw if not found.
      */
     StoredFile findByOriginalNameOrThrow(String filename);
+
+    /**
+     * Find a file by its UUID filename.
+     * (Preferred for unique lookups)
+     */
+    Optional<StoredFile> findByUuidFilename(String uuidFilename);
+
+    /**
+     * Find a file by its UUID filename or throw if not found.
+     */
+    StoredFile findByUuidFilenameOrThrow(String uuidFilename);
 }
+

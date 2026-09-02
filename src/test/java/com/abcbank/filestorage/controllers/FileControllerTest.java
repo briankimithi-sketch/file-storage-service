@@ -47,6 +47,7 @@ class FileControllerTest {
 
         StoredFile stored = new StoredFile();
         stored.setOriginalName("hello.txt");
+        stored.setUuidFilename("uuid.txt");   // ✅ UUID filename
         stored.setContentType("text/plain");
         stored.setSize(11);
         stored.setFilePath("uploads/uuid.txt");
@@ -56,10 +57,8 @@ class FileControllerTest {
         mockMvc.perform(multipart("/files/upload").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.originalName").value("hello.txt"))
-                .andExpect(jsonPath("$.size").value(11))
-                // ✅ Expect absolute URLs now
-                .andExpect(jsonPath("$.downloadUrl").value("http://localhost/files/hello.txt"))
-                .andExpect(jsonPath("$.viewUrl").value("http://localhost/files/hello.txt"));
+                .andExpect(jsonPath("$.uuidFilename").value("uuid.txt"))   // ✅ expect UUID
+                .andExpect(jsonPath("$.size").value(11));
     }
 
     @Test
@@ -94,16 +93,17 @@ class FileControllerTest {
     void testDownloadFile() throws Exception {
         StoredFile stored = new StoredFile();
         stored.setOriginalName("hello.txt");
+        stored.setUuidFilename("test-uuid.txt");   // ✅ UUID filename
         stored.setContentType("text/plain");
         stored.setSize(11);
-        stored.setFilePath("uploads/uuid.txt");
+        stored.setFilePath("uploads/test-uuid.txt");
 
         ByteArrayResource resource = new ByteArrayResource("Hello World".getBytes());
 
-        Mockito.when(storageService.findByOriginalNameOrThrow("hello.txt")).thenReturn(stored);
+        Mockito.when(storageService.findByUuidFilenameOrThrow("test-uuid.txt")).thenReturn(stored);  // ✅ updated mock
         Mockito.when(storageService.loadAsResource(stored)).thenReturn(resource);
 
-        mockMvc.perform(get("/files/download/hello.txt"))
+        mockMvc.perform(get("/files/download/test-uuid.txt"))   // ✅ updated URL
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"hello.txt\""))
                 .andExpect(content().contentType(MediaType.TEXT_PLAIN))
@@ -112,19 +112,19 @@ class FileControllerTest {
 
     @Test
     void testDownloadFileNotFound() throws Exception {
-        Mockito.when(storageService.findByOriginalNameOrThrow("missing.txt"))
+        Mockito.when(storageService.findByUuidFilenameOrThrow("missing.txt"))   // ✅ updated mock
                 .thenThrow(new FileNotFoundException("missing.txt"));
 
-        mockMvc.perform(get("/files/download/missing.txt"))
+        mockMvc.perform(get("/files/download/missing.txt"))   // ✅ updated URL
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("File not found with filename: missing.txt"));
     }
 
     @Test
     void testDeleteFile() throws Exception {
-        Mockito.doNothing().when(storageService).deleteByFilename("hello.txt");
+        Mockito.doNothing().when(storageService).deleteByFilename("uuid-delete.txt");
 
-        mockMvc.perform(delete("/files/hello.txt"))
+        mockMvc.perform(delete("/files/uuid-delete.txt"))
                 .andExpect(status().isNoContent());
     }
 

@@ -8,13 +8,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/files")
+@RequestMapping("/files")   // ✅ base path is /files only
 public class FileController {
 
     private final StorageService storageService;
@@ -28,31 +27,18 @@ public class FileController {
     public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) throws IOException {
         StoredFile stored = storageService.store(file);
 
-        String downloadUrl = ServletUriComponentsBuilder
-                .fromCurrentContextPath()
-                .path("/files/")
-                .path(stored.getOriginalName())
-                .toUriString();
-
-        String viewUrl = ServletUriComponentsBuilder
-                .fromCurrentContextPath()
-                .path("/files/")
-                .path(stored.getOriginalName())
-                .toUriString();
-
         Map<String, Object> response = Map.of(
                 "originalName", stored.getOriginalName(),
-                "size", stored.getSize(),
-                "downloadUrl", downloadUrl,
-                "viewUrl", viewUrl
+                "uuidFilename", stored.getUuidFilename(),
+                "size", stored.getSize()
         );
         return ResponseEntity.ok(response);
     }
 
-    // Download by filename (forces download)
-    @GetMapping("/download/{filename}")
-    public ResponseEntity<Resource> download(@PathVariable String filename) {
-        StoredFile stored = storageService.findByOriginalNameOrThrow(filename);
+    // Download by UUID filename (forces download)
+    @GetMapping("/download/{uuidFilename}")
+    public ResponseEntity<Resource> download(@PathVariable String uuidFilename) {
+        StoredFile stored = storageService.findByUuidFilenameOrThrow(uuidFilename);
         Resource resource = storageService.loadAsResource(stored);
 
         String contentType = stored.getContentType();
@@ -67,10 +53,10 @@ public class FileController {
                 .body(resource);
     }
 
-    // Inline view by filename (browser displays)
-    @GetMapping("/{filename}")   // ⚠️ changed from {filename:.+}
-    public ResponseEntity<Resource> view(@PathVariable String filename) {
-        StoredFile stored = storageService.findByOriginalNameOrThrow(filename);
+    // Inline view by UUID filename (browser displays)
+    @GetMapping("/{uuidFilename}")
+    public ResponseEntity<Resource> view(@PathVariable String uuidFilename) {
+        StoredFile stored = storageService.findByUuidFilenameOrThrow(uuidFilename);
         Resource resource = storageService.loadAsResource(stored);
 
         String contentType = stored.getContentType();
@@ -85,10 +71,10 @@ public class FileController {
                 .body(resource);
     }
 
-    // Delete by filename
-    @DeleteMapping("/{filename}")
-    public ResponseEntity<Void> delete(@PathVariable String filename) throws IOException {
-        storageService.deleteByFilename(filename);
+    // Delete by UUID filename
+    @DeleteMapping("/{uuidFilename}")
+    public ResponseEntity<Void> delete(@PathVariable String uuidFilename) throws IOException {
+        storageService.deleteByFilename(uuidFilename);
         return ResponseEntity.noContent().build();
     }
 }

@@ -9,8 +9,13 @@ public interface StoredFileRepository extends JpaRepository<StoredFile, Long> {
 
     /**
      * Find a file record by its original filename.
-     * Spring Data JPA will generate the query automatically:
-     * SELECT * FROM stored_files WHERE original_name = ?
+     * Useful for legacy lookups, but may return duplicates.
      */
     Optional<StoredFile> findByOriginalName(String originalName);
+
+    /**
+     * Find a file record by its UUID-based filename.
+     * This is guaranteed to be unique and is the preferred lookup.
+     */
+    Optional<StoredFile> findByUuidFilename(String uuidFilename);
 }
