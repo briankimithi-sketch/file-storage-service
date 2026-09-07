@@ -42,43 +42,56 @@ public class FileSystemStorageService implements StorageService {
     }
 
     @Override
-    @CacheEvict(value = {"files", "filesByUuid"}, allEntries = true)
+    @CacheEvict(value = {"files", "filesByOriginalName"}, allEntries = true)
     public StoredFile store(MultipartFile file) throws IOException {
+
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Cannot store empty file");
         }
 
         String originalName = file.getOriginalFilename();
+
         if (originalName == null || !isAllowedExtension(originalName)) {
-            throw new InvalidFileTypeException(originalName, ALLOWED_EXTENSIONS);
+            throw new InvalidFileTypeException(
+                    originalName,
+                    ALLOWED_EXTENSIONS
+            );
         }
 
-        // Generate UUID-based filename
-        String ext = originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase();
-        String uuidFilename = UUID.randomUUID().toString() + "." + ext;
 
-        Path destination = root.resolve(uuidFilename);
-        Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
+        String ext = originalName
+                .substring(originalName.lastIndexOf('.') + 1)
+                .toLowerCase();
+
+        String storedFilename = UUID.randomUUID() + "." + ext;
+
+        Path destination = root.resolve(storedFilename);
+
+        Files.copy(
+                file.getInputStream(),
+                destination,
+                StandardCopyOption.REPLACE_EXISTING
+        );
 
         StoredFile stored = new StoredFile();
+
         stored.setOriginalName(originalName);
-        stored.setUuidFilename(uuidFilename);
         stored.setFilePath(destination.toString());
         stored.setContentType(file.getContentType());
         stored.setSize(file.getSize());
         stored.setCreatedOn(LocalDateTime.now());
 
-        // Build URLs using UUID filename
+
         String downloadUrl = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
                 .path("/files/download/")
-                .path(uuidFilename)
+                .path(originalName)
                 .toUriString();
 
         String viewUrl = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
                 .path("/files/")
-                .path(uuidFilename)
+                .path(originalName)
                 .toUriString();
 
         stored.setDownloadUrl(downloadUrl);
@@ -88,28 +101,46 @@ public class FileSystemStorageService implements StorageService {
     }
 
     private boolean isAllowedExtension(String filename) {
+
         int dotIndex = filename.lastIndexOf('.');
-        if (dotIndex == -1) return false;
-        String ext = filename.substring(dotIndex + 1).toLowerCase();
+
+        if (dotIndex == -1) {
+            return false;
+        }
+
+        String ext = filename
+                .substring(dotIndex + 1)
+                .toLowerCase();
+
         return ALLOWED_EXTENSIONS.contains(ext);
     }
 
     @Override
     public Resource loadAsResource(StoredFile storedFile) {
+
         Path filePath = Paths.get(storedFile.getFilePath());
+
         if (!Files.exists(filePath)) {
-            throw new FileNotFoundException(storedFile.getUuidFilename());
+            throw new FileNotFoundException(
+                    storedFile.getOriginalName()
+            );
         }
+
         return new FileSystemResource(filePath);
     }
 
     @Override
-    @CacheEvict(value = {"files", "filesByUuid"}, allEntries = true)
-    public void deleteByFilename(String uuidFilename) throws IOException {
-        StoredFile stored = repository.findByUuidFilename(uuidFilename)
-                .orElseThrow(() -> new FileNotFoundException(uuidFilename));
+    @CacheEvict(value = {"files", "filesByOriginalName"}, allEntries = true)
+    public void deleteByFilename(String filename) throws IOException {
 
-        Files.deleteIfExists(Paths.get(stored.getFilePath()));
+        StoredFile stored = repository.findByOriginalName(filename)
+                .orElseThrow(() -> new FileNotFoundException(filename));
+
+
+        Files.deleteIfExists(
+                Paths.get(stored.getFilePath())
+        );
+
         repository.delete(stored);
     }
 
@@ -118,29 +149,20 @@ public class FileSystemStorageService implements StorageService {
         return repository.findAll();
     }
 
-    // ===== Legacy originalName methods (to satisfy interface) =====
     @Override
     public Optional<StoredFile> findByOriginalName(String filename) {
         return repository.findByOriginalName(filename);
     }
 
     @Override
-    @Cacheable(value = "filesByOriginalName", key = "#filename")
+    @Cacheable(
+            value = "filesByOriginalName",
+            key = "#filename"
+    )
     public StoredFile findByOriginalNameOrThrow(String filename) {
+
         return repository.findByOriginalName(filename)
                 .orElseThrow(() -> new FileNotFoundException(filename));
     }
-
-    // ===== Preferred UUID-based methods =====
-    @Override
-    @Cacheable(value = "filesByUuid", key = "#uuidFilename")
-    public StoredFile findByUuidFilenameOrThrow(String uuidFilename) {
-        return repository.findByUuidFilename(uuidFilename)
-                .orElseThrow(() -> new FileNotFoundException(uuidFilename));
-    }
-
-    @Override
-    public Optional<StoredFile> findByUuidFilename(String uuidFilename) {
-        return repository.findByUuidFilename(uuidFilename);
-    }
 }
+

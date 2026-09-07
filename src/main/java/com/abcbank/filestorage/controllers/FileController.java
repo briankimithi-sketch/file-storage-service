@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/files")   // ✅ base path is /files only
+@RequestMapping("/files")
 public class FileController {
 
     private final StorageService storageService;
@@ -22,59 +22,89 @@ public class FileController {
         this.storageService = storageService;
     }
 
-    // Upload file
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<Map<String, Object>> upload(
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+
         StoredFile stored = storageService.store(file);
 
         Map<String, Object> response = Map.of(
                 "originalName", stored.getOriginalName(),
-                "uuidFilename", stored.getUuidFilename(),
-                "size", stored.getSize()
+                "size", stored.getSize(),
+                "downloadUrl", stored.getDownloadUrl(),
+                "viewUrl", stored.getViewUrl()
         );
+
         return ResponseEntity.ok(response);
     }
 
-    // Download by UUID filename (forces download)
-    @GetMapping("/download/{uuidFilename}")
-    public ResponseEntity<Resource> download(@PathVariable String uuidFilename) {
-        StoredFile stored = storageService.findByUuidFilenameOrThrow(uuidFilename);
-        Resource resource = storageService.loadAsResource(stored);
+    @GetMapping("/download/{filename:.+}")
+    public ResponseEntity<Resource> download(
+            @PathVariable String filename
+    ) {
+
+        StoredFile stored =
+                storageService.findByOriginalNameOrThrow(filename);
+
+        Resource resource =
+                storageService.loadAsResource(stored);
 
         String contentType = stored.getContentType();
+
         if (contentType == null || contentType.isBlank()) {
             contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + stored.getOriginalName() + "\"")
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" +
+                                stored.getOriginalName() +
+                                "\""
+                )
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(resource);
     }
 
-    // Inline view by UUID filename (browser displays)
-    @GetMapping("/{uuidFilename}")
-    public ResponseEntity<Resource> view(@PathVariable String uuidFilename) {
-        StoredFile stored = storageService.findByUuidFilenameOrThrow(uuidFilename);
-        Resource resource = storageService.loadAsResource(stored);
+
+    @GetMapping("/{filename:.+}")
+    public ResponseEntity<Resource> view(
+            @PathVariable String filename
+    ) {
+
+        StoredFile stored =
+                storageService.findByOriginalNameOrThrow(filename);
+
+        Resource resource =
+                storageService.loadAsResource(stored);
 
         String contentType = stored.getContentType();
+
         if (contentType == null || contentType.isBlank()) {
             contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"" + stored.getOriginalName() + "\"")
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" +
+                                stored.getOriginalName() +
+                                "\""
+                )
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(resource);
     }
 
-    // Delete by UUID filename
-    @DeleteMapping("/{uuidFilename}")
-    public ResponseEntity<Void> delete(@PathVariable String uuidFilename) throws IOException {
-        storageService.deleteByFilename(uuidFilename);
+
+    @DeleteMapping("/{filename:.+}")
+    public ResponseEntity<Void> delete(
+            @PathVariable String filename
+    ) throws IOException {
+
+        storageService.deleteByFilename(filename);
+
         return ResponseEntity.noContent().build();
     }
 }
+

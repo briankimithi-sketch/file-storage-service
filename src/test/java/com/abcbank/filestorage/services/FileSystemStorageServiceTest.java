@@ -4,6 +4,7 @@ import com.abcbank.filestorage.entities.StoredFile;
 import com.abcbank.filestorage.exceptions.FileNotFoundException;
 import com.abcbank.filestorage.exceptions.InvalidFileTypeException;
 import com.abcbank.filestorage.repositories.StoredFileRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -11,8 +12,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,146 +31,324 @@ class FileSystemStorageServiceTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        repository = Mockito.mock(StoredFileRepository.class);
-        testRoot = Files.createTempDirectory("test-uploads");
-        storageService = new FileSystemStorageService(repository, testRoot.toString());
+
+        repository = Mockito.mock(
+                StoredFileRepository.class
+        );
+
+        testRoot = Files.createTempDirectory(
+                "test-uploads"
+        );
+
+        storageService =
+                new FileSystemStorageService(
+                        repository,
+                        testRoot.toString()
+                );
     }
 
     @Test
     void testStoreFileBuildsUrls() throws IOException {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "hello.txt", "text/plain", "Hello World".getBytes()
+
+        MockMultipartFile file =
+                new MockMultipartFile(
+                        "file",
+                        "hello.txt",
+                        "text/plain",
+                        "Hello World".getBytes()
+                );
+
+        HttpServletRequest request =
+                mock(HttpServletRequest.class);
+
+        when(request.getScheme())
+                .thenReturn("http");
+
+        when(request.getServerName())
+                .thenReturn("localhost");
+
+        when(request.getServerPort())
+                .thenReturn(8080);
+
+        when(request.getContextPath())
+                .thenReturn("");
+
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request)
         );
 
-        // ✅ Bind a mock request so ServletUriComponentsBuilder works
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getScheme()).thenReturn("http");
-        when(request.getServerName()).thenReturn("localhost");
-        when(request.getServerPort()).thenReturn(8080);
-        when(request.getContextPath()).thenReturn("");
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
-
         StoredFile saved = new StoredFile();
+
         saved.setOriginalName("hello.txt");
-        saved.setUuidFilename("123e4567-e89b-12d3-a456-426614174000.txt");
         saved.setContentType("text/plain");
         saved.setSize(11);
-        saved.setDownloadUrl("http://localhost/files/123e4567-e89b-12d3-a456-426614174000.txt");
-        saved.setViewUrl("http://localhost/files/123e4567-e89b-12d3-a456-426614174000.txt");
 
-        when(repository.save(any(StoredFile.class))).thenReturn(saved);
+        saved.setDownloadUrl(
+                "http://localhost:8080/files/download/hello.txt"
+        );
 
-        StoredFile result = storageService.store(file);
+        saved.setViewUrl(
+                "http://localhost:8080/files/hello.txt"
+        );
 
-        assertThat(result.getOriginalName()).isEqualTo("hello.txt");
-        assertThat(result.getSize()).isEqualTo(11);
-        assertThat(result.getDownloadUrl()).contains("/files/");
-        assertThat(result.getViewUrl()).contains("/files/");
-        verify(repository, times(1)).save(any(StoredFile.class));
+        when(repository.save(any(StoredFile.class)))
+                .thenReturn(saved);
+
+        StoredFile result =
+                storageService.store(file);
+
+        assertThat(result.getOriginalName())
+                .isEqualTo("hello.txt");
+
+        assertThat(result.getSize())
+                .isEqualTo(11);
+
+        assertThat(result.getDownloadUrl())
+                .isEqualTo(
+                        "http://localhost:8080/files/download/hello.txt"
+                );
+
+        assertThat(result.getViewUrl())
+                .isEqualTo(
+                        "http://localhost:8080/files/hello.txt"
+                );
+
+        verify(repository, times(1))
+                .save(any(StoredFile.class));
+
+        RequestContextHolder.resetRequestAttributes();
     }
 
     @Test
     void testStoreEmptyFileThrowsException() {
-        MockMultipartFile emptyFile = new MockMultipartFile(
-                "file", "empty.txt", "text/plain", new byte[0]
-        );
 
-        assertThrows(IllegalArgumentException.class, () -> storageService.store(emptyFile));
+        MockMultipartFile emptyFile =
+                new MockMultipartFile(
+                        "file",
+                        "empty.txt",
+                        "text/plain",
+                        new byte[0]
+                );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> storageService.store(emptyFile)
+        );
     }
 
     @Test
     void testStoreInvalidFileTypeThrowsException() {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "malware.exe", "application/octet-stream", "dummy".getBytes()
-        );
 
-        assertThrows(InvalidFileTypeException.class, () -> storageService.store(file));
+        MockMultipartFile file =
+                new MockMultipartFile(
+                        "file",
+                        "malware.exe",
+                        "application/octet-stream",
+                        "dummy".getBytes()
+                );
+
+        assertThrows(
+                InvalidFileTypeException.class,
+                () -> storageService.store(file)
+        );
     }
 
     @Test
     void testLoadAsResource() throws IOException {
-        Path filePath = testRoot.resolve("test.txt");
-        Files.writeString(filePath, "Hello World");
 
-        StoredFile stored = new StoredFile();
+        Path filePath =
+                testRoot.resolve("physical-file.txt");
+
+        Files.writeString(
+                filePath,
+                "Hello World"
+        );
+
+        StoredFile stored =
+                new StoredFile();
+
         stored.setOriginalName("test.txt");
-        stored.setUuidFilename("uuid-test.txt");
-        stored.setFilePath(filePath.toString());
+        stored.setFilePath(
+                filePath.toString()
+        );
 
-        Resource resource = storageService.loadAsResource(stored);
+        Resource resource =
+                storageService.loadAsResource(stored);
 
-        assertThat(resource.exists()).isTrue();
-        assertThat(resource.getFile().getName()).isEqualTo("test.txt");
+        assertThat(resource.exists())
+                .isTrue();
+
+        assertThat(resource.getFile().getName())
+                .isEqualTo("physical-file.txt");
     }
 
     @Test
     void testLoadAsResourceFileNotFound() {
-        StoredFile stored = new StoredFile();
-        stored.setOriginalName("missing.txt");
-        stored.setUuidFilename("uuid-missing.txt");
-        stored.setFilePath(testRoot.resolve("missing.txt").toString());
 
-        assertThrows(FileNotFoundException.class, () -> storageService.loadAsResource(stored));
+        StoredFile stored =
+                new StoredFile();
+
+        stored.setOriginalName("missing.txt");
+
+        stored.setFilePath(
+                testRoot
+                        .resolve("missing-physical-file.txt")
+                        .toString()
+        );
+
+        assertThrows(
+                FileNotFoundException.class,
+                () -> storageService.loadAsResource(stored)
+        );
     }
 
     @Test
     void testDeleteFileByFilename() throws IOException {
-        Path filePath = testRoot.resolve("delete.txt");
-        Files.writeString(filePath, "to be deleted");
 
-        StoredFile stored = new StoredFile();
+        Path filePath =
+                testRoot.resolve("physical-delete.txt");
+
+        Files.writeString(
+                filePath,
+                "to be deleted"
+        );
+
+        StoredFile stored =
+                new StoredFile();
+
         stored.setOriginalName("delete.txt");
-        stored.setUuidFilename("uuid-delete.txt");
-        stored.setFilePath(filePath.toString());
 
-        when(repository.findByUuidFilename(stored.getUuidFilename())).thenReturn(Optional.of(stored));
+        stored.setFilePath(
+                filePath.toString()
+        );
 
-        storageService.deleteByFilename(stored.getUuidFilename());
+        when(
+                repository.findByOriginalName("delete.txt")
+        ).thenReturn(
+                Optional.of(stored)
+        );
 
-        assertThat(Files.exists(filePath)).isFalse();
-        verify(repository, times(1)).delete(stored);
+        storageService.deleteByFilename(
+                "delete.txt"
+        );
+
+        assertThat(
+                Files.exists(filePath)
+        ).isFalse();
+
+        verify(
+                repository,
+                times(1)
+        ).delete(stored);
     }
 
     @Test
     void testDeleteFileByFilenameNotFound() {
-        when(repository.findByUuidFilename("uuid-missing.txt")).thenReturn(Optional.empty());
 
-        assertThrows(FileNotFoundException.class, () -> storageService.deleteByFilename("uuid-missing.txt"));
+        when(
+                repository.findByOriginalName(
+                        "missing.txt"
+                )
+        ).thenReturn(
+                Optional.empty()
+        );
+
+        assertThrows(
+                FileNotFoundException.class,
+                () -> storageService.deleteByFilename(
+                        "missing.txt"
+                )
+        );
     }
 
     @Test
     void testFindByOriginalName() {
-        StoredFile stored = new StoredFile();
+
+        StoredFile stored =
+                new StoredFile();
+
         stored.setOriginalName("hello.txt");
-        stored.setUuidFilename("uuid-hello.txt");
-        stored.setDownloadUrl("http://localhost/files/uuid-hello.txt");
 
-        when(repository.findByOriginalName("hello.txt")).thenReturn(Optional.of(stored));
+        stored.setDownloadUrl(
+                "http://localhost:8080/files/download/hello.txt"
+        );
 
-        StoredFile result = storageService.findByOriginalNameOrThrow("hello.txt");
+        when(
+                repository.findByOriginalName(
+                        "hello.txt"
+                )
+        ).thenReturn(
+                Optional.of(stored)
+        );
 
-        assertThat(result.getDownloadUrl()).contains("/files/");
+        StoredFile result =
+                storageService.findByOriginalNameOrThrow(
+                        "hello.txt"
+                );
+
+        assertThat(result.getOriginalName())
+                .isEqualTo("hello.txt");
+
+        assertThat(result.getDownloadUrl())
+                .contains(
+                        "/files/download/hello.txt"
+                );
     }
 
     @Test
     void testFindByOriginalNameNotFound() {
-        when(repository.findByOriginalName("missing.txt")).thenReturn(Optional.empty());
 
-        assertThrows(FileNotFoundException.class, () -> storageService.findByOriginalNameOrThrow("missing.txt"));
+        when(
+                repository.findByOriginalName(
+                        "missing.txt"
+                )
+        ).thenReturn(
+                Optional.empty()
+        );
+
+        assertThrows(
+                FileNotFoundException.class,
+                () ->
+                        storageService
+                                .findByOriginalNameOrThrow(
+                                        "missing.txt"
+                                )
+        );
     }
 
     @Test
     void testFindAll() {
-        StoredFile stored = new StoredFile();
+
+        StoredFile stored =
+                new StoredFile();
+
         stored.setOriginalName("hello.txt");
-        stored.setUuidFilename("uuid-hello.txt");
-        stored.setDownloadUrl("http://localhost/files/uuid-hello.txt");
 
-        when(repository.findAll()).thenReturn(List.of(stored));
+        stored.setDownloadUrl(
+                "http://localhost:8080/files/download/hello.txt"
+        );
 
-        List<StoredFile> result = storageService.findAll();
+        when(repository.findAll())
+                .thenReturn(
+                        List.of(stored)
+                );
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getDownloadUrl()).contains("/files/");
+        List<StoredFile> result =
+                storageService.findAll();
+
+        assertThat(result)
+                .hasSize(1);
+
+        assertThat(
+                result.get(0).getOriginalName()
+        ).isEqualTo("hello.txt");
+
+        assertThat(
+                result.get(0).getDownloadUrl()
+        ).contains(
+                "/files/download/hello.txt"
+        );
     }
 }
+
+
