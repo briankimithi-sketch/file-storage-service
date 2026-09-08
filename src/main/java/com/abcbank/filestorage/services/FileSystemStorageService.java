@@ -17,11 +17,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class FileSystemStorageService implements StorageService {
@@ -32,26 +32,41 @@ public class FileSystemStorageService implements StorageService {
     private static final List<String> ALLOWED_EXTENSIONS =
             List.of("txt", "pdf", "jpg", "png");
 
+    private static final DateTimeFormatter DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy/MM/dd");
+
     public FileSystemStorageService(
             StoredFileRepository repository,
             @Value("${filestorage.root:uploads}") String rootDir
     ) throws IOException {
+
         this.repository = repository;
-        this.root = Paths.get(System.getProperty("user.dir")).resolve(rootDir);
+
+        this.root = Paths
+                .get(System.getProperty("user.dir"))
+                .resolve(rootDir)
+                .toAbsolutePath()
+                .normalize();
+
         Files.createDirectories(root);
     }
 
     @Override
-    @CacheEvict(value = {"files", "filesByOriginalName"}, allEntries = true)
+    @CacheEvict(
+            value = {"files", "filesByOriginalName"},
+            allEntries = true
+    )
     public StoredFile store(MultipartFile file) throws IOException {
 
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("Cannot store empty file");
+            throw new IllegalArgumentException(
+                    "Cannot store empty file"
+            );
         }
 
         String originalName = file.getOriginalFilename();
 
-        if (originalName == null || !isAllowedExtension(originalName)) {
+        if (originalName == null || originalName.isBlank()) {
             throw new InvalidFileTypeException(
                     originalName,
                     ALLOWED_EXTENSIONS
@@ -59,18 +74,59 @@ public class FileSystemStorageService implements StorageService {
         }
 
 
-        String ext = originalName
-                .substring(originalName.lastIndexOf('.') + 1)
-                .toLowerCase();
+        originalName = Paths
+                .get(originalName)
+                .getFileName()
+                .toString();
 
-        String storedFilename = UUID.randomUUID() + "." + ext;
+        if (!isAllowedExtension(originalName)) {
+            throw new InvalidFileTypeException(
+                    originalName,
+                    ALLOWED_EXTENSIONS
+            );
+        }
 
-        Path destination = root.resolve(storedFilename);
+        if (repository.findByOriginalName(originalName).isPresent()) {
+            throw new IOException(
+                    "A file with the name '" +
+                            originalName +
+                            "' already exists"
+            );
+        }
 
+
+        String datePath =
+                LocalDate.now().format(DATE_FORMAT);
+
+        Path subDirectory =
+                root.resolve(datePath)
+                        .normalize();
+
+        if (!subDirectory.startsWith(root)) {
+            throw new IOException(
+                    "Invalid storage directory"
+            );
+        }
+
+        Files.createDirectories(subDirectory);
+
+        Path destination =
+                subDirectory
+                        .resolve(originalName)
+                        .normalize();
+
+        if (!destination.startsWith(root)) {
+            throw new IOException(
+                    "Invalid file destination"
+            );
+        }
+
+        /*
+         * Do not overwrite an existing file.
+         */
         Files.copy(
                 file.getInputStream(),
-                destination,
-                StandardCopyOption.REPLACE_EXISTING
+                destination
         );
 
         StoredFile stored = new StoredFile();
@@ -81,18 +137,22 @@ public class FileSystemStorageService implements StorageService {
         stored.setSize(file.getSize());
         stored.setCreatedOn(LocalDateTime.now());
 
+        /*
+         * URLs use the original filename.
+         */
+        String downloadUrl =
+                ServletUriComponentsBuilder
+                        .fromCurrentContextPath()
+                        .path("/files/download/")
+                        .path(originalName)
+                        .toUriString();
 
-        String downloadUrl = ServletUriComponentsBuilder
-                .fromCurrentContextPath()
-                .path("/files/download/")
-                .path(originalName)
-                .toUriString();
-
-        String viewUrl = ServletUriComponentsBuilder
-                .fromCurrentContextPath()
-                .path("/files/")
-                .path(originalName)
-                .toUriString();
+        String viewUrl =
+                ServletUriComponentsBuilder
+                        .fromCurrentContextPath()
+                        .path("/files/")
+                        .path(originalName)
+                        .toUriString();
 
         stored.setDownloadUrl(downloadUrl);
         stored.setViewUrl(viewUrl);
@@ -108,19 +168,32 @@ public class FileSystemStorageService implements StorageService {
             return false;
         }
 
-        String ext = filename
-                .substring(dotIndex + 1)
-                .toLowerCase();
+        String extension =
+                filename
+                        .substring(dotIndex + 1)
+                        .toLowerCase();
 
-        return ALLOWED_EXTENSIONS.contains(ext);
+        return ALLOWED_EXTENSIONS.contains(extension);
     }
 
     @Override
     public Resource loadAsResource(StoredFile storedFile) {
 
-        Path filePath = Paths.get(storedFile.getFilePath());
+        Path filePath =
+                Paths
+                        .get(storedFile.getFilePath())
+                        .toAbsolutePath()
+                        .normalize();
 
-        if (!Files.exists(filePath)) {
+        if (!filePath.startsWith(root)) {
+            throw new FileNotFoundException(
+                    storedFile.getOriginalName()
+            );
+        }
+
+        if (!Files.exists(filePath) ||
+                !Files.isRegularFile(filePath)) {
+
             throw new FileNotFoundException(
                     storedFile.getOriginalName()
             );
@@ -130,27 +203,48 @@ public class FileSystemStorageService implements StorageService {
     }
 
     @Override
-    @CacheEvict(value = {"files", "filesByOriginalName"}, allEntries = true)
-    public void deleteByFilename(String filename) throws IOException {
+    @CacheEvict(
+            value = {"files", "filesByOriginalName"},
+            allEntries = true
+    )
+    public void deleteByFilename(String filename)
+            throws IOException {
 
-        StoredFile stored = repository.findByOriginalName(filename)
-                .orElseThrow(() -> new FileNotFoundException(filename));
+        StoredFile stored =
+                repository.findByOriginalName(filename)
+                        .orElseThrow(
+                                () -> new FileNotFoundException(
+                                        filename
+                                )
+                        );
 
+        Path filePath =
+                Paths
+                        .get(stored.getFilePath())
+                        .toAbsolutePath()
+                        .normalize();
 
-        Files.deleteIfExists(
-                Paths.get(stored.getFilePath())
-        );
+        if (!filePath.startsWith(root)) {
+            throw new IOException(
+                    "Invalid file location"
+            );
+        }
+
+        Files.deleteIfExists(filePath);
 
         repository.delete(stored);
     }
 
     @Override
+    @Cacheable("files")
     public List<StoredFile> findAll() {
         return repository.findAll();
     }
 
     @Override
-    public Optional<StoredFile> findByOriginalName(String filename) {
+    public Optional<StoredFile> findByOriginalName(
+        String filename
+    ) {
         return repository.findByOriginalName(filename);
     }
 
@@ -159,10 +253,13 @@ public class FileSystemStorageService implements StorageService {
             value = "filesByOriginalName",
             key = "#filename"
     )
-    public StoredFile findByOriginalNameOrThrow(String filename) {
+    public StoredFile findByOriginalNameOrThrow(
+            String filename
+    ) {
 
         return repository.findByOriginalName(filename)
-                .orElseThrow(() -> new FileNotFoundException(filename));
+                .orElseThrow(
+                        () -> new FileNotFoundException(filename)
+                );
     }
 }
-

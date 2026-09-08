@@ -16,16 +16,14 @@ public interface StorageService {
 
     Resource loadAsResource(StoredFile storedFile);
 
-
     void deleteByFilename(String filename) throws IOException;
 
 
     List<StoredFile> findAll();
 
-    Optional<StoredFile> findByOriginalName(String filename);
 
+    Optional<StoredFile> findByOriginalName(String filename);
 
     StoredFile findByOriginalNameOrThrow(String filename);
 }
-
 

@@ -27,7 +27,8 @@ public class FileController {
             @RequestParam("file") MultipartFile file
     ) throws IOException {
 
-        StoredFile stored = storageService.store(file);
+        StoredFile stored =
+                storageService.store(file);
 
         Map<String, Object> response = Map.of(
                 "originalName", stored.getOriginalName(),
@@ -45,15 +46,21 @@ public class FileController {
     ) {
 
         StoredFile stored =
-                storageService.findByOriginalNameOrThrow(filename);
+                storageService.findByOriginalNameOrThrow(
+                        filename
+                );
 
         Resource resource =
                 storageService.loadAsResource(stored);
 
-        String contentType = stored.getContentType();
+        String contentType =
+                stored.getContentType();
 
-        if (contentType == null || contentType.isBlank()) {
-            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        if (contentType == null ||
+                contentType.isBlank()) {
+
+            contentType =
+                    MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
 
         return ResponseEntity.ok()
@@ -63,10 +70,11 @@ public class FileController {
                                 stored.getOriginalName() +
                                 "\""
                 )
-                .contentType(MediaType.parseMediaType(contentType))
+                .contentType(
+                        MediaType.parseMediaType(contentType)
+                )
                 .body(resource);
     }
-
 
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> view(
@@ -74,15 +82,21 @@ public class FileController {
     ) {
 
         StoredFile stored =
-                storageService.findByOriginalNameOrThrow(filename);
+                storageService.findByOriginalNameOrThrow(
+                        filename
+                );
 
         Resource resource =
                 storageService.loadAsResource(stored);
 
-        String contentType = stored.getContentType();
+        String contentType =
+                stored.getContentType();
 
-        if (contentType == null || contentType.isBlank()) {
-            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        if (contentType == null ||
+                contentType.isBlank()) {
+
+            contentType =
+                    MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
 
         return ResponseEntity.ok()
@@ -92,10 +106,11 @@ public class FileController {
                                 stored.getOriginalName() +
                                 "\""
                 )
-                .contentType(MediaType.parseMediaType(contentType))
+                .contentType(
+                        MediaType.parseMediaType(contentType)
+                )
                 .body(resource);
     }
-
 
     @DeleteMapping("/{filename:.+}")
     public ResponseEntity<Void> delete(
@@ -107,4 +122,3 @@ public class FileController {
         return ResponseEntity.noContent().build();
     }
 }
-

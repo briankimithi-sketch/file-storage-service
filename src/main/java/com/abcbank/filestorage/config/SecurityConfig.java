@@ -33,7 +33,6 @@ public class SecurityConfig {
                 .anyRequest().authenticated() // everything else requires JWT
             )
 
-            // Enable JWT validation via OAuth2 Resource Server
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();

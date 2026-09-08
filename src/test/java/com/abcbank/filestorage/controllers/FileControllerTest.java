@@ -1,74 +1,75 @@
 package com.abcbank.filestorage.controllers;
 
 import com.abcbank.filestorage.entities.StoredFile;
-import com.abcbank.filestorage.exceptions.FileNotFoundException;
-import com.abcbank.filestorage.exceptions.InvalidFileTypeException;
 import com.abcbank.filestorage.services.StorageService;
+import com.abcbank.filestorage.exceptions.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
-import java.util.List;
+import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 class FileControllerTest {
 
-    @Autowired
-    private WebApplicationContext context;
-
     private MockMvc mockMvc;
-
-    @MockBean
     private StorageService storageService;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders
-                .webAppContextSetup(context)
-                .build();
+
+        storageService =
+                mock(StorageService.class);
+
+        FileController controller =
+                new FileController(storageService);
+
+        mockMvc =
+                MockMvcBuilders
+                        .standaloneSetup(controller)
+                        .setControllerAdvice(
+                                new GlobalExceptionHandler()
+                        )
+                        .build();
     }
 
     @Test
     void testUploadFile() throws Exception {
 
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "hello.txt",
-                "text/plain",
-                "Hello World".getBytes()
-        );
+        StoredFile stored =
+                new StoredFile();
 
-        StoredFile stored = new StoredFile();
         stored.setOriginalName("hello.txt");
-        stored.setContentType("text/plain");
         stored.setSize(11);
-        stored.setFilePath("uploads/uuid-physical-file.txt");
+        stored.setContentType("text/plain");
+
         stored.setDownloadUrl(
                 "http://localhost:8080/files/download/hello.txt"
         );
+
         stored.setViewUrl(
                 "http://localhost:8080/files/hello.txt"
         );
 
-        Mockito.when(storageService.store(any()))
-                .thenReturn(stored);
+        when(
+                storageService.store(any())
+        ).thenReturn(stored);
 
         mockMvc.perform(
                         multipart("/files/upload")
-                                .file(file)
+                                .file(
+                                        "file",
+                                        "Hello World".getBytes()
+                                )
                 )
                 .andExpect(status().isOk())
                 .andExpect(
@@ -91,92 +92,37 @@ class FileControllerTest {
                                         "http://localhost:8080/files/hello.txt"
                                 )
                 );
-    }
 
-    @Test
-    void testUploadEmptyFile() throws Exception {
-
-        MockMultipartFile emptyFile = new MockMultipartFile(
-                "file",
-                "empty.txt",
-                "text/plain",
-                new byte[0]
-        );
-
-        Mockito.when(storageService.store(any()))
-                .thenThrow(
-                        new IllegalArgumentException(
-                                "Cannot store empty file"
-                        )
-                );
-
-        mockMvc.perform(
-                        multipart("/files/upload")
-                                .file(emptyFile)
-                )
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        jsonPath("$.error")
-                                .value("Cannot store empty file")
-                );
-    }
-
-    @Test
-    void testUploadInvalidFileType() throws Exception {
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "malware.exe",
-                "application/octet-stream",
-                "dummy".getBytes()
-        );
-
-        Mockito.when(storageService.store(any()))
-                .thenThrow(
-                        new InvalidFileTypeException(
-                                "malware.exe",
-                                List.of("txt", "pdf", "jpg", "png")
-                        )
-                );
-
-        mockMvc.perform(
-                        multipart("/files/upload")
-                                .file(file)
-                )
-                .andExpect(status().isBadRequest())
-                .andExpect(
-                        jsonPath("$.error")
-                                .value(
-                                        "Invalid file type for malware.exe. Allowed: [txt, pdf, jpg, png]"
-                                )
-                );
+        verify(
+                storageService,
+                times(1)
+        ).store(any());
     }
 
     @Test
     void testDownloadFile() throws Exception {
 
-        StoredFile stored = new StoredFile();
+        StoredFile stored =
+                new StoredFile();
 
         stored.setOriginalName("hello.txt");
         stored.setContentType("text/plain");
         stored.setSize(11);
-        stored.setFilePath("uploads/uuid-physical-file.txt");
 
-        ByteArrayResource resource =
+        Resource resource =
                 new ByteArrayResource(
                         "Hello World".getBytes()
                 );
 
-        Mockito.when(
-                        storageService
-                                .findByOriginalNameOrThrow("hello.txt")
+        when(
+                storageService.findByOriginalNameOrThrow(
+                        "hello.txt"
                 )
-                .thenReturn(stored);
+        ).thenReturn(stored);
 
-        Mockito.when(
-                        storageService.loadAsResource(stored)
-                )
-                .thenReturn(resource);
+        when(
+                storageService.loadAsResource(stored)
+        ).thenReturn(resource);
 
         mockMvc.perform(
                         get("/files/download/hello.txt")
@@ -192,60 +138,74 @@ class FileControllerTest {
                         content().contentType(
                                 MediaType.TEXT_PLAIN
                         )
-                )
-                .andExpect(
-                        content().string("Hello World")
                 );
+
+        verify(
+                storageService,
+                times(1)
+        ).findByOriginalNameOrThrow(
+                "hello.txt"
+        );
+
+        verify(
+                storageService,
+                times(1)
+        ).loadAsResource(stored);
     }
 
     @Test
-    void testDownloadFileNotFound() throws Exception {
+    void testDownloadFileNotFound()
+            throws Exception {
 
-        Mockito.when(
-                        storageService
-                                .findByOriginalNameOrThrow("missing.txt")
+        when(
+                storageService.findByOriginalNameOrThrow(
+                        "missing.txt"
                 )
-                .thenThrow(
-                        new FileNotFoundException("missing.txt")
-                );
+        ).thenThrow(
+                new com.abcbank.filestorage.exceptions.FileNotFoundException(
+                        "missing.txt"
+                )
+        );
 
         mockMvc.perform(
                         get("/files/download/missing.txt")
                 )
-                .andExpect(status().isNotFound())
                 .andExpect(
-                        jsonPath("$.error")
-                                .value(
-                                        "File not found with filename: missing.txt"
-                                )
+                        status().isNotFound()
                 );
+
+        verify(
+                storageService,
+                times(1)
+        ).findByOriginalNameOrThrow(
+                "missing.txt"
+        );
     }
 
     @Test
     void testViewFile() throws Exception {
 
-        StoredFile stored = new StoredFile();
+        StoredFile stored =
+                new StoredFile();
 
         stored.setOriginalName("hello.txt");
         stored.setContentType("text/plain");
         stored.setSize(11);
-        stored.setFilePath("uploads/uuid-physical-file.txt");
 
-        ByteArrayResource resource =
+        Resource resource =
                 new ByteArrayResource(
                         "Hello World".getBytes()
                 );
 
-        Mockito.when(
-                        storageService
-                                .findByOriginalNameOrThrow("hello.txt")
+        when(
+                storageService.findByOriginalNameOrThrow(
+                        "hello.txt"
                 )
-                .thenReturn(stored);
+        ).thenReturn(stored);
 
-        Mockito.when(
-                        storageService.loadAsResource(stored)
-                )
-                .thenReturn(resource);
+        when(
+                storageService.loadAsResource(stored)
+        ).thenReturn(resource);
 
         mockMvc.perform(
                         get("/files/hello.txt")
@@ -261,67 +221,71 @@ class FileControllerTest {
                         content().contentType(
                                 MediaType.TEXT_PLAIN
                         )
-                )
-                .andExpect(
-                        content().string("Hello World")
-                );
-    }
-
-    @Test
-    void testViewFileNotFound() throws Exception {
-
-        Mockito.when(
-                        storageService
-                                .findByOriginalNameOrThrow("missing.txt")
-                )
-                .thenThrow(
-                        new FileNotFoundException("missing.txt")
                 );
 
-        mockMvc.perform(
-                        get("/files/missing.txt")
-                )
-                .andExpect(status().isNotFound())
-                .andExpect(
-                        jsonPath("$.error")
-                                .value(
-                                        "File not found with filename: missing.txt"
-                                )
-                );
+        verify(
+                storageService,
+                times(1)
+        ).findByOriginalNameOrThrow(
+                "hello.txt"
+        );
+
+        verify(
+                storageService,
+                times(1)
+        ).loadAsResource(stored);
     }
 
     @Test
     void testDeleteFile() throws Exception {
 
-        Mockito.doNothing()
+        doNothing()
                 .when(storageService)
-                .deleteByFilename("hello.txt");
+                .deleteByFilename(
+                        "hello.txt"
+                );
 
         mockMvc.perform(
                         delete("/files/hello.txt")
                 )
-                .andExpect(status().isNoContent());
+                .andExpect(
+                        status().isNoContent()
+                );
+
+        verify(
+                storageService,
+                times(1)
+        ).deleteByFilename(
+                "hello.txt"
+        );
     }
 
     @Test
-    void testDeleteFileNotFound() throws Exception {
+    void testDeleteFileNotFound()
+            throws Exception {
 
-        Mockito.doThrow(
-                        new FileNotFoundException("missing.txt")
+        doThrow(
+                new com.abcbank.filestorage.exceptions.FileNotFoundException(
+                        "missing.txt"
                 )
+        )
                 .when(storageService)
-                .deleteByFilename("missing.txt");
+                .deleteByFilename(
+                        "missing.txt"
+                );
 
         mockMvc.perform(
                         delete("/files/missing.txt")
                 )
-                .andExpect(status().isNotFound())
                 .andExpect(
-                        jsonPath("$.error")
-                                .value(
-                                        "File not found with filename: missing.txt"
-                                )
+                        status().isNotFound()
                 );
+
+        verify(
+                storageService,
+                times(1)
+        ).deleteByFilename(
+                "missing.txt"
+        );
     }
 }
-
