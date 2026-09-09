@@ -4,15 +4,12 @@ import com.abcbank.filestorage.entities.StoredFile;
 import com.abcbank.filestorage.exceptions.FileNotFoundException;
 import com.abcbank.filestorage.exceptions.InvalidFileTypeException;
 import com.abcbank.filestorage.repositories.StoredFileRepository;
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,59 +32,57 @@ class FileSystemStorageServiceTest {
 
     private Path testRoot;
 
+    private static final String BACKEND_BASE_URL =
+            "http://localhost:8080";
+
     @BeforeEach
     void setUp() throws IOException {
 
-        repository =
-                Mockito.mock(
-                        StoredFileRepository.class
-                );
+        repository = Mockito.mock(
+                StoredFileRepository.class
+        );
 
-        testRoot =
-                Files.createTempDirectory(
-                        "test-uploads"
-                );
+        testRoot = Files.createTempDirectory(
+                "test-uploads"
+        );
 
-        storageService =
-                new FileSystemStorageService(
-                        repository,
-                        testRoot.toString()
-                );
+        storageService = new FileSystemStorageService(
+                repository,
+                testRoot.toString(),
+                BACKEND_BASE_URL
+        );
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws IOException {
 
-        RequestContextHolder.resetRequestAttributes();
+        deleteDirectory(testRoot);
     }
 
-    private void setUpMockRequest() {
+    private void deleteDirectory(Path directory)
+            throws IOException {
 
-        HttpServletRequest request =
-                mock(HttpServletRequest.class);
+        if (directory == null || !Files.exists(directory)) {
+            return;
+        }
 
-        when(request.getScheme())
-                .thenReturn("http");
-
-        when(request.getServerName())
-                .thenReturn("localhost");
-
-        when(request.getServerPort())
-                .thenReturn(8080);
-
-        when(request.getContextPath())
-                .thenReturn("");
-
-        RequestContextHolder.setRequestAttributes(
-                new ServletRequestAttributes(request)
-        );
+        try (var paths = Files.walk(directory)) {
+            paths.sorted(
+                    (path1, path2) ->
+                            path2.compareTo(path1)
+            ).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                    // Ignore cleanup failures.
+                }
+            });
+        }
     }
 
     @Test
     void testStoreFileBuildsUrls()
             throws IOException {
-
-        setUpMockRequest();
 
         MockMultipartFile file =
                 new MockMultipartFile(
@@ -96,21 +91,6 @@ class FileSystemStorageServiceTest {
                         "text/plain",
                         "Hello World".getBytes()
                 );
-
-        StoredFile saved =
-                new StoredFile();
-
-        saved.setOriginalName("hello.txt");
-        saved.setContentType("text/plain");
-        saved.setSize(11);
-
-        saved.setDownloadUrl(
-                "http://localhost:8080/files/download/hello.txt"
-        );
-
-        saved.setViewUrl(
-                "http://localhost:8080/files/hello.txt"
-        );
 
         when(
                 repository.findByOriginalName(
@@ -124,7 +104,10 @@ class FileSystemStorageServiceTest {
                 repository.save(
                         any(StoredFile.class)
                 )
-        ).thenReturn(saved);
+        ).thenAnswer(
+                invocation ->
+                        invocation.getArgument(0)
+        );
 
         StoredFile result =
                 storageService.store(file);
@@ -160,8 +143,6 @@ class FileSystemStorageServiceTest {
     @Test
     void testStoreFileCreatesDateSubdirectories()
             throws IOException {
-
-        setUpMockRequest();
 
         MockMultipartFile file =
                 new MockMultipartFile(
@@ -228,9 +209,12 @@ class FileSystemStorageServiceTest {
         assertThat(
                 Path.of(
                         result.getFilePath()
-                ).toAbsolutePath().normalize()
+                )
+                .toAbsolutePath()
+                .normalize()
         ).isEqualTo(
-                expectedPath.toAbsolutePath()
+                expectedPath
+                        .toAbsolutePath()
                         .normalize()
         );
     }
@@ -355,6 +339,50 @@ class FileSystemStorageServiceTest {
     }
 
     @Test
+    void testLoadAsResourceRejectsOutsideRoot()
+            throws IOException {
+
+        Path outsideFile =
+                Files.createTempFile(
+                        "outside-storage",
+                        ".txt"
+                );
+
+        try {
+
+            Files.writeString(
+                    outsideFile,
+                    "This file is outside storage"
+            );
+
+            StoredFile stored =
+                    new StoredFile();
+
+            stored.setOriginalName(
+                    "outside.txt"
+            );
+
+            stored.setFilePath(
+                    outsideFile.toString()
+            );
+
+            assertThrows(
+                    FileNotFoundException.class,
+                    () ->
+                            storageService.loadAsResource(
+                                    stored
+                            )
+            );
+
+        } finally {
+
+            Files.deleteIfExists(
+                    outsideFile
+            );
+        }
+    }
+
+    @Test
     void testDeleteFileByFilename()
             throws IOException {
 
@@ -463,9 +491,7 @@ class FileSystemStorageServiceTest {
 
         assertThat(
                 result.getOriginalName()
-        ).isEqualTo(
-                "hello.txt"
-        );
+        ).isEqualTo("hello.txt");
 
         assertThat(
                 result.getDownloadUrl()
@@ -523,9 +549,7 @@ class FileSystemStorageServiceTest {
 
         assertThat(
                 result.get(0).getOriginalName()
-        ).isEqualTo(
-                "hello.txt"
-        );
+        ).isEqualTo("hello.txt");
 
         assertThat(
                 result.get(0).getDownloadUrl()
