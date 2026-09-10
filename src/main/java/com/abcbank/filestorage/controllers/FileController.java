@@ -6,7 +6,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,10 +19,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin(
-        origins = "http://localhost:5173",
-        exposedHeaders = HttpHeaders.CONTENT_DISPOSITION
-)
 @RestController
 @RequestMapping("/files")
 public class FileController {
@@ -39,9 +34,7 @@ public class FileController {
      */
     @GetMapping
     public ResponseEntity<List<StoredFile>> findAll() {
-        return ResponseEntity.ok(
-                storageService.findAll()
-        );
+        return ResponseEntity.ok(storageService.findAll());
     }
 
     /**
@@ -52,21 +45,13 @@ public class FileController {
             @RequestParam("file") MultipartFile file
     ) throws IOException {
 
-        StoredFile stored =
-                storageService.store(file);
+        StoredFile storedFile = storageService.store(file);
 
         Map<String, Object> response = Map.of(
-                "originalName",
-                stored.getOriginalName(),
-
-                "size",
-                stored.getSize(),
-
-                "downloadUrl",
-                stored.getDownloadUrl(),
-
-                "viewUrl",
-                stored.getViewUrl()
+                "originalName", storedFile.getOriginalName(),
+                "size", storedFile.getSize(),
+                "downloadUrl", storedFile.getDownloadUrl(),
+                "viewUrl", storedFile.getViewUrl()
         );
 
         return ResponseEntity.ok(response);
@@ -80,24 +65,20 @@ public class FileController {
             @PathVariable String filename
     ) {
 
-        StoredFile stored =
-                storageService.findByOriginalNameOrThrow(
-                        filename
-                );
+        StoredFile storedFile =
+                storageService.findByOriginalNameOrThrow(filename);
 
         Resource resource =
-                storageService.loadAsResource(stored);
+                storageService.loadAsResource(storedFile);
 
         return ResponseEntity.ok()
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" +
-                                stored.getOriginalName() +
+                                storedFile.getOriginalName() +
                                 "\""
                 )
-                .contentType(
-                        getContentType(stored)
-                )
+                .contentType(getContentType(storedFile))
                 .body(resource);
     }
 
@@ -109,24 +90,20 @@ public class FileController {
             @PathVariable String filename
     ) {
 
-        StoredFile stored =
-                storageService.findByOriginalNameOrThrow(
-                        filename
-                );
+        StoredFile storedFile =
+                storageService.findByOriginalNameOrThrow(filename);
 
         Resource resource =
-                storageService.loadAsResource(stored);
+                storageService.loadAsResource(storedFile);
 
         return ResponseEntity.ok()
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" +
-                                stored.getOriginalName() +
+                                storedFile.getOriginalName() +
                                 "\""
                 )
-                .contentType(
-                        getContentType(stored)
-                )
+                .contentType(getContentType(storedFile))
                 .body(resource);
     }
 
@@ -138,9 +115,7 @@ public class FileController {
             @PathVariable String filename
     ) throws IOException {
 
-        storageService.deleteByFilename(
-                filename
-        );
+        storageService.deleteByFilename(filename);
 
         return ResponseEntity.noContent().build();
     }
@@ -148,25 +123,17 @@ public class FileController {
     /**
      * Resolve the stored content type.
      */
-    private MediaType getContentType(
-            StoredFile stored
-    ) {
+    private MediaType getContentType(StoredFile storedFile) {
 
-        String contentType =
-                stored.getContentType();
+        String contentType = storedFile.getContentType();
 
-        if (contentType == null ||
-                contentType.isBlank()) {
-
+        if (contentType == null || contentType.isBlank()) {
             return MediaType.APPLICATION_OCTET_STREAM;
         }
 
         try {
-            return MediaType.parseMediaType(
-                    contentType
-            );
+            return MediaType.parseMediaType(contentType);
         } catch (IllegalArgumentException e) {
-
             return MediaType.APPLICATION_OCTET_STREAM;
         }
     }

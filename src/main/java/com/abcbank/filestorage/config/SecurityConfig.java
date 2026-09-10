@@ -16,24 +16,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-
-            .csrf(csrf -> csrf.disable())
-
-        
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/",                
-                    
-                                        // root path is public now
-                    "/files/**",        // file endpoints are public
-                    "/public/api/v1/**",// token fetch endpoint
-                    "/v3/api-docs/**",  // OpenAPI docs
-                    "/swagger-ui/**"    // Swagger UI
-                ).permitAll()
-                .anyRequest().authenticated() // everything else requires JWT
-            )
-
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/",
+                                "/files/**",
+                                "/public/api/v1/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**"
+                        )
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated()
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(Customizer.withDefaults())
+                );
 
         return http.build();
     }
