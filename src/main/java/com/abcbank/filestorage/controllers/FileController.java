@@ -29,17 +29,12 @@ public class FileController {
         this.storageService = storageService;
     }
 
-    /**
-     * Get all stored files.
-     */
+
     @GetMapping
     public ResponseEntity<List<StoredFile>> findAll() {
         return ResponseEntity.ok(storageService.findAll());
     }
 
-    /**
-     * Upload a file.
-     */
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> upload(
             @RequestParam("file") MultipartFile file
@@ -57,9 +52,7 @@ public class FileController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Download a file.
-     */
+
     @GetMapping("/download/{filename:.+}")
     public ResponseEntity<Resource> download(
             @PathVariable String filename
@@ -82,9 +75,7 @@ public class FileController {
                 .body(resource);
     }
 
-    /**
-     * View a file in the browser.
-     */
+
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> view(
             @PathVariable String filename
@@ -107,9 +98,6 @@ public class FileController {
                 .body(resource);
     }
 
-    /**
-     * Delete a file.
-     */
     @DeleteMapping("/{filename:.+}")
     public ResponseEntity<Void> delete(
             @PathVariable String filename
@@ -120,9 +108,7 @@ public class FileController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Resolve the stored content type.
-     */
+
     private MediaType getContentType(StoredFile storedFile) {
 
         String contentType = storedFile.getContentType();
