@@ -1,0 +1,269 @@
+						 A REPORT ON UNIT TESTING IN NEGOTIATED RATES:
+BY;
+NAME: BRIAN KIMITHI.
+CONTACT: +254719307495.
+EMAIL: briankimithi@gmail.com .
+POSITION: INTERN SOFTWARE DEVELOPMENT.
+DEPARTMENT: ICT, ABC BANK.
+DATE: JULY 17, 2026.
+
+					 
+						 
+                                Unit Testing
+
+
+Unit Testing is a software testing method in which individual units or components of a software application (such as functions, methods, or classes) are tested in isolation to verify that they work correctly as expected.
+
+   a) It helps find and fix defects at the very beginning of the development cycle, reducing the cost and effort of debugging later.
+   b) It promotes writing modular, clean, and maintainable code by ensuring each small part of the application behaves correctly on its own.
+
+    Example: In banking applications, unit testing is used to verify interest calculations, loan eligibility rules, and transaction validation logic.						 
+						 
+				Unit Testing Process
+
+The unit testing workflow includes the following step by step process:
+Unit Testing Process
+
+a)  Identify the Unit to Test:
+    Identify the function, method, class, or module that needs to be tested and understand its expected behavior.
+b)  Create Unit Test Cases:
+    Write unit test cases covering positive, negative, boundary, and exception scenarios for the selected unit.
+c)  Execute Unit Tests: 
+    Run the unit tests using a testing framework to verify that the code behaves as expected.
+d)  Analyze Test Results: 
+    Review the test results to identify failed test cases and determine the cause of defects.
+e)  Fix Defects: 
+    Correct the issues found during testing and update the code to resolve identified defects.
+f)  Re-execute Unit Tests:
+    Run the unit tests again after fixes to ensure the defects have been resolved successfully.
+g)  Measure Test Coverage: 
+    Evaluate code coverage to verify that critical paths, conditions, and branches have been adequately tested.
+h)  Integrate with CI/CD Pipeline: 
+    Automate unit test execution within the build process to ensure continuous code quality and early defect detection.
+    
+    
+    
+                          Types of Unit Testing 
+
+Unit testing can be performed manually or automatically:
+Manual Unit Testing
+
+Manual Unit Testing involves verifying individual units of code without relying on automated test frameworks. It is mainly used during debugging or initial code validation.
+
+    Developers manually verify the behavior of small functions, methods, or modules.
+    It is useful for quick validation during development or troubleshooting.
+    It is not suitable for repetitive testing and becomes time-consuming as the application grows. 
+
+Automated Unit Testing
+
+Automated Unit Testing uses testing frameworks and tools to validate individual units of code automatically. It helps improve code quality and reduces the effort required for repeated testing.
+
+    Tests are executed automatically and focus on isolated units of code.
+    Mock objects or stubs are often used to eliminate dependencies on external systems.
+    Automated unit tests are commonly integrated into CI/CD pipelines to support continuous testing and faster feedback.
+    
+    
+    
+    
+                           Architecture of Unit Testing
+
+Unit Testing Architecture defines the structure and approach used to test individual software components in isolation. It helps ensure that each unit functions correctly and supports maintainable, reliable, and high-quality code.
+
+Unit tests form the foundation of the Testing Pyramid (Unit → Integration → End-to-End) because they execute quickly, provide rapid feedback, and help detect defects early in development.
+
+
+
+                Components of Unit Testing Architecture
+
+1. Test Isolation & Dependencies: Each unit is tested independently from external systems such as databases, APIs, and file systems. Mocks, stubs, and fakes are used to simulate dependencies, ensuring that only the unit's internal logic is validated.
+
+2. AAA Pattern (Arrange–Act–Assert): The AAA pattern provides a structured approach for writing clear and maintainable unit tests.
+
+    Arrange: Prepare test data, objects, and required mocks.
+    Act: Execute the function or method being tested.
+    Assert: Verify that the actual result matches the expected outcome. 
+
+This approach promotes modular testing, improves test readability, and enables developers to identify issues quickly. Since unit tests typically execute in milliseconds, they provide fast feedback during development and CI/CD execution.
+
+Common unit testing frameworks include JUnit (Java), pytest (Python), xUnit (.NET), and Jest (JavaScript).
+
+
+
+
+              Unit Testing Strategies
+
+    To create effective unit tests the following techniques are commonly used:
+
+   - Logic Checks: 
+    Verify that calculations are correct and all logical paths in the code are executed as expected.
+   - Boundary Checks: 
+    Test normal, edge, and invalid inputs to ensure the system handles limits correctly.
+   - Error Handling: 
+    Ensure the system responds properly to errors instead of crashing.
+   - Object-Oriented Checks: 
+    Confirm that object states are correctly updated after method execution.
+    
+    
+    
+    Unit testing in my negotiated‑rates project ensures that rate negotiation flows, transfers, and repository queries are reliable.
+    The key testing points, mainly are;
+    
+    1. Controllers
+
+    RateRequestControllerTest → Validates endpoints for creating and fetching rate requests.
+
+    TransferControllerTest → Ensures transfers are created with correct fields and error handling.
+
+    RateAcceptControllerTest → Confirms acceptance flow returns expected status codes.
+
+    2. Services
+
+    RateRequestServiceTest → Tests business rules (e.g., rate request validation, approval logic).
+
+    TransferServiceTest → Verifies transfer creation, currency conversion, and persistence.
+
+    3. Repositories
+
+    RateRequestRepoTest → Confirms queries return correct rate requests by ID/status.
+
+    TransferRepoTest → Validates persistence and retrieval of transfers.
+
+
+    
+         I have used a mixed testing strategy across the project:
+
+  1. Unit Tests 
+     Tools: JUnit 5 + Mockito
+
+     Pattern: @ExtendWith(MockitoExtension.class) with @Mock and @InjectMocks
+
+     These are pure unit tests with no Spring ApplicationContext:
+
+      Layer	Tests
+     Controllers	       RateRequestControllerTest, RateAcceptControllerTest, TransferControllerTest, AuthControllerTest, MessageControllerTest, RootControllerTest
+     Services	               RateRequestServiceTest, TransferServiceTest, AppNotificationTest
+     Producers	               RabbitMQProducerTest
+     Utils	               HTTPSClientTest, StringOperationTest
+     Config	               RabbitMQConfigTest, OpenAPI30ConfigurationTest
+     
+  2. Integration Tests (data access layer only)
+     Tools: Spring @DataJpaTest
+
+     These spin up a real database connection to PostgreSQL:
+
+      Test	               Purpose
+     RateRequestRepoTest       Custom JPQL/SQL queries for RateRequest
+     TransferRepoTest	       Basic JPA CRUD for Transfer
+     
+     Configuration:
+
+     @DataJpaTest
+     @AutoConfigureTestDatabase(replace = NONE)
+     @TestPropertySource(properties = {
+    "spring.datasource.url=jdbc:postgresql://localhost:5432/abconnect_api_db?currentSchema=nr_test",
+    ...
+     }
+
+     Controllers: 
+     RateRequestControllerTest, RateAcceptControllerTest, TransferControllerTest, AuthControllerTest, MessageControllerTest, RootControllerTest — all use   ExtendWith(MockitoExtension.class) with @Mock and @InjectMocks. Pure unit tests with mocked dependencies.
+     
+      Services:
+      RateRequestServiceTest, TransferServiceTest, AppNotificationTest — all use @ExtendWith(MockitoExtension.class) with @Mock and @InjectMocks. Pure unit tests.
+      Producer: 
+      RabbitMQProducerTest — uses @ExtendWith(MockitoExtension.class). Pure unit test.
+      Utils: HTTPSClientTest, StringOperationTest — pure unit tests.
+      Config: 
+      RabbitMQConfigTest, OpenAPI30ConfigurationTest — pure unit tests without Spring context.
+      
+      Integration Tests:
+      Repositories: RateRequestRepoTest, TransferRepoTest — use @DataJpaTest with @AutoConfigureTestDatabase(replace = NONE) connecting to a real PostgreSQL database    (localhost:5432/abconnect_api_db?currentSchema=nr_test). These are data access layer integration tests.
+So the project uses a mixed testing strategy:
+
+      Unit tests for business logic (controllers, services, utils, config) using JUnit 5 + Mockito
+      Integration tests for data access layer using @DataJpaTest with a real database.
+     
+     
+     
+     This project uses JUnit 5 + Mockito for the majority of tests, with a small set of Spring Data JPA integration tests.
+
+     Test breakdown (90 total):
+
+     Controller unit tests : Pure Mockito tests with @ExtendWith(MockitoExtension.class). No Spring context loaded. Covers RateRequestController,RateAcceptController,      TransferController, AuthController, MessageController, and RootController.
+     
+     Service unit tests : Pure Mockito tests covering RateRequestService, TransferService, and AppNotification.
+     
+     Repository integration tests : @DataJpaTest with real PostgreSQL (abconnect_api_db, schema nr_test). Covers RateRequestRepo and TransferRepo.
+
+     Config/producer/utils tests : RabbitMQConfig, OpenAPI30Configuration, RabbitMQProducer, HTTPSClient, and StringOperation.
+
+Key patterns:
+
+    - Controllers and services are tested in isolation with @Mock / @InjectMocks
+     
+    - No @SpringBootTest smoke tests (removed due to external infra dependencies)
+     
+    - Mockito inline agent configured in pom.xml to suppress dynamic-attach warnings on JDK 21
+     
+    - Keycloak JWT resource-server security is enabled but does not affect unit tests since they don't load the full application context
+     
+     
+     
+     
+
+    Characteristics of Unit Testing
+
+    A good unit test ensures reliable and maintainable software by validating individual code units effectively. 
+    
+    The key characteristics of a unit test are:
+
+    a) Fast: 
+       Executes quickly so tests can be run frequently during development.
+    b) Independent: 
+       Runs in isolation without relying on other tests or external systems.
+    c) Repeatable:  
+       Produces the same result every time, regardless of environment.
+    d) Self-Validating: 
+       Clearly indicates pass or fail without manual inspection.
+    e) Focused: 
+       Tests a single function or behavior at a time.
+    f) Readable and Maintainable:
+       Easy to understand, update, and maintain.
+       
+       
+       Benefits of Unit Testing
+
+    Unit testing helps ensure reliable software by validating individual components of an application in isolation.
+
+    -Detects bugs early in the development cycle, reducing debugging cost.
+    -Improves code quality by ensuring each unit works correctly.
+    -Increases confidence when making code changes or adding new features.
+    -Speeds up development by allowing quick validation of code changes.
+    -Supports safe refactoring without breaking existing functionality.
+    -Acts as documentation for understanding code behavior.
+    
+    
+    
+    Unit Testing Tools
+
+    Following are some of the unit testing tools:
+
+    
+    JUnit: A widely-used Java testing framework for creating and running unit tests.
+    
+    TestNG: An advanced Java testing framework with features like parallel testing.
+    
+    Mockito: A Java mocking framework for simulating dependencies.  
+     
+    I have mainly used Mockito and JUnit unit testing tools.
+    
+    
+    
+    Limitations of Unit Testing
+
+    Unit testing is an important part of software testing, but it has certain limitations that affect its scope and effectiveness.
+
+    -Focuses only on individual components and does not test overall system behavior.
+    -Cannot detect integration issues between different modules or services.
+    -Requires additional effort to write and maintain test cases for large projects.
+    -May not identify usability or UI-related issues that require end-user interaction.
+    -Effectiveness depends on the quality of test cases written by developers.
