@@ -1,0 +1,514 @@
+   # **REPORT ON UNIT TESTING IN THE NEGOTIATED RATES SYSTEM**
+
+**Prepared By:** Brian Kimithi
+**Position:** Intern Software Developer
+**Department:** ICT Department
+**Organization:** ABC Bank
+**Email:** [briankimithi@gmail.com](mailto:briankimithi@gmail.com)
+**Contact:** +254 719 307 495
+**Date:** July 17, 2026
+
+---
+
+# Table of Contents
+
+1. Introduction
+2. What is Unit Testing?
+3. Objectives of Unit Testing
+4. Unit Testing Process
+5. Types of Unit Testing
+6. Unit Testing Architecture
+7. Unit Testing Strategies
+8. Unit Testing in the Negotiated Rates Project
+9. Testing Frameworks and Tools Used
+10. Testing Strategy Implemented
+11. Test Coverage Summary
+12. Characteristics of Good Unit Tests
+13. Benefits of Unit Testing
+14. Limitations of Unit Testing
+15. Conclusion
+
+---
+
+# 1. Introduction
+
+Software quality is one of the most important aspects of modern software development, especially within the banking industry where reliability, accuracy, security, and data integrity are critical. Even minor software defects can lead to financial losses, transaction failures, or security vulnerabilities.
+
+One of the most effective techniques for improving software quality is **Unit Testing**. It allows developers to verify that each component of an application behaves as expected before it is integrated with other parts of the system.
+
+During my internship at **ABC Bank**, I implemented extensive unit testing while developing the **Negotiated Rates System**, ensuring that the application's business logic, controllers, services, repositories, and utility components functioned correctly and consistently.
+
+---
+
+# 2. What is Unit Testing?
+
+Unit Testing is a software testing technique in which individual units or components of an application—such as methods, classes, or functions—are tested independently to verify that they produce the expected results.
+
+A unit test focuses on a single piece of functionality without depending on external services such as databases, APIs, messaging systems, or authentication servers.
+
+Unit testing helps developers:
+
+* Detect defects early in the development lifecycle.
+* Reduce debugging costs.
+* Build modular and maintainable software.
+* Improve application reliability.
+* Increase confidence when modifying existing code.
+
+### Banking Example
+
+In banking systems, unit testing is commonly used to verify:
+
+* Interest calculations
+* Loan eligibility rules
+* Transaction validation
+* Currency conversion
+* Payment processing
+* Account balance calculations
+* Exchange rate negotiations
+
+---
+
+# 3. Objectives of Unit Testing
+
+The primary objectives of unit testing include:
+
+* Verifying that every software component behaves correctly.
+* Detecting programming errors before integration.
+* Improving software quality.
+* Supporting safe code refactoring.
+* Increasing developer confidence.
+* Providing documentation through executable test cases.
+* Reducing production defects.
+
+---
+
+# 4. Unit Testing Process
+
+The unit testing lifecycle consists of the following stages:
+
+### Step 1: Identify the Unit
+
+Select the function, class, or module to be tested and understand its expected behavior.
+
+### Step 2: Design Test Cases
+
+Develop test cases covering:
+
+* Positive scenarios
+* Negative scenarios
+* Boundary conditions
+* Exception handling
+* Invalid inputs
+
+### Step 3: Execute Tests
+
+Run the tests using an appropriate testing framework.
+
+### Step 4: Analyze Results
+
+Determine which tests passed or failed and identify the cause of failures.
+
+### Step 5: Fix Defects
+
+Correct identified issues within the application code.
+
+### Step 6: Re-run Tests
+
+Execute the tests again to confirm that defects have been resolved.
+
+### Step 7: Measure Coverage
+
+Evaluate how much of the application code has been tested.
+
+### Step 8: Continuous Integration
+
+Automate test execution within the CI/CD pipeline to provide continuous quality assurance.
+
+---
+
+# 5. Types of Unit Testing
+
+## Manual Unit Testing
+
+Manual unit testing involves verifying code behavior without automated testing frameworks.
+
+Characteristics include:
+
+* Useful during debugging
+* Suitable for quick validation
+* Time-consuming for large applications
+* Difficult to repeat consistently
+
+---
+
+## Automated Unit Testing
+
+Automated testing uses testing frameworks to execute unit tests automatically.
+
+Advantages include:
+
+* Fast execution
+* Repeatability
+* High reliability
+* Easy integration into CI/CD pipelines
+* Continuous quality verification
+
+---
+
+# 6. Unit Testing Architecture
+
+A good unit testing architecture ensures software components are tested independently.
+
+## Test Isolation
+
+External dependencies such as:
+
+* Databases
+* APIs
+* RabbitMQ
+* Authentication servers
+* File systems
+
+are replaced using mock objects.
+
+This ensures that only the business logic being tested influences the outcome.
+
+---
+
+## AAA Pattern
+
+The project follows the Arrange–Act–Assert (AAA) testing pattern.
+
+### Arrange
+
+Prepare:
+
+* Test objects
+* Mock dependencies
+* Input data
+
+### Act
+
+Execute the method under test.
+
+### Assert
+
+Verify that the expected results match the actual output.
+
+This structure produces readable, maintainable, and reliable test cases.
+
+---
+
+# 7. Unit Testing Strategies
+
+Several testing techniques were applied throughout the project.
+
+## Logic Testing
+
+Verifies that business rules produce correct results.
+
+Examples include:
+
+* Rate approval logic
+* Currency conversion
+* Validation rules
+
+---
+
+## Boundary Value Testing
+
+Tests edge cases such as:
+
+* Minimum values
+* Maximum values
+* Empty requests
+* Null inputs
+
+---
+
+## Error Handling
+
+Ensures the application responds correctly to:
+
+* Invalid requests
+* Missing data
+* Exceptions
+
+instead of crashing.
+
+---
+
+## Object State Verification
+
+Confirms that application objects maintain the correct state after method execution.
+
+---
+
+# 8. Unit Testing in the Negotiated Rates Project
+
+## Project Overview
+
+The Negotiated Rates System enables bank users to negotiate foreign exchange rates before initiating transfers. The system manages the complete negotiation lifecycle, including rate requests, approvals, transfers, notifications, and data persistence.
+
+To ensure reliability, a comprehensive testing strategy was implemented across multiple application layers.
+
+---
+
+## Controller Testing
+
+Controller unit tests verified REST API behavior independently from the service layer.
+
+The following controllers were tested:
+
+* RateRequestController
+* RateAcceptController
+* TransferController
+* AuthController
+* MessageController
+* RootController
+
+These tests validated:
+
+* HTTP status codes
+* Request validation
+* JSON responses
+* Exception handling
+* Endpoint behavior
+* Controller-to-service interactions using mocked dependencies
+
+---
+
+## Service Layer Testing
+
+The service layer contains the core business logic of the application.
+
+The following services were tested:
+
+* RateRequestService
+* TransferService
+* AppNotification
+
+Major business scenarios covered included:
+
+* Rate request creation
+* Approval workflows
+* Rejection workflows
+* Currency conversion calculations
+* Transfer creation
+* Validation of negotiated rates
+* Notification triggering
+* Business rule enforcement
+* Exception handling
+
+Mockito was used extensively to isolate the service layer from repositories and external systems.
+
+---
+
+## Repository Integration Testing
+
+Unlike controller and service tests, repository tests interacted with a real PostgreSQL database.
+
+Repositories tested include:
+
+* RateRequestRepo
+* TransferRepo
+
+These integration tests verified:
+
+* Custom JPQL queries
+* CRUD operations
+* Data persistence
+* Record retrieval
+* Query correctness
+* Entity relationships
+
+Configuration used:
+
+* `@DataJpaTest`
+* `@AutoConfigureTestDatabase(replace = NONE)`
+* PostgreSQL test schema (`nr_test`)
+
+This ensured repository behavior accurately reflected production database interactions.
+
+---
+
+## Producer Testing
+
+The RabbitMQProducer component was unit tested to verify:
+
+* Message generation
+* Queue publishing logic
+* Producer behavior
+
+without requiring an actual RabbitMQ server.
+
+---
+
+## Utility Testing
+
+Utility classes were tested independently, including:
+
+* HTTPSClient
+* StringOperation
+
+These tests verified helper methods used throughout the application.
+
+---
+
+## Configuration Testing
+
+Configuration classes were also tested to verify application bean creation and configuration logic.
+
+Components tested include:
+
+* RabbitMQConfig
+* OpenAPI30Configuration
+
+---
+
+# 9. Testing Frameworks and Tools Used
+
+The project primarily used the following technologies:
+
+| Tool                 | Purpose                        |
+| -------------------- | ------------------------------ |
+| JUnit 5              | Unit testing framework         |
+| Mockito              | Mocking framework              |
+| Spring Data JPA Test | Repository integration testing |
+| PostgreSQL           | Database integration tests     |
+| Maven Surefire       | Test execution                 |
+| Mockito Extension    | Dependency injection for mocks |
+
+---
+
+# 10. Testing Strategy Implemented
+
+The project adopted a mixed testing strategy consisting of unit testing and integration testing.
+
+## Unit Tests
+
+Frameworks:
+
+* JUnit 5
+* Mockito
+
+Annotations used:
+
+* `@ExtendWith(MockitoExtension.class)`
+* `@Mock`
+* `@InjectMocks`
+
+These tests execute without loading the Spring Application Context, resulting in very fast execution.
+
+### Components Covered
+
+* Controllers
+* Services
+* Producers
+* Utilities
+* Configuration classes
+
+---
+
+## Integration Tests
+
+Repository tests use:
+
+* `@DataJpaTest`
+
+with a real PostgreSQL database configured specifically for testing.
+
+These tests validate:
+
+* SQL queries
+* Repository behavior
+* Persistence
+* Entity mapping
+
+without loading the complete application.
+
+---
+
+# 11. Test Coverage Summary
+
+A total of **90 automated tests** were implemented across the application.
+
+| Layer             | Coverage                 |
+| ----------------- | ------------------------ |
+| Controllers       | REST endpoint validation |
+| Services          | Business logic           |
+| Repositories      | Database integration     |
+| Utilities         | Helper methods           |
+| RabbitMQ Producer | Messaging logic          |
+| Configuration     | Bean creation            |
+
+Key implementation highlights include:
+
+* Pure Mockito-based controller tests
+* Pure Mockito-based service tests
+* Real PostgreSQL repository testing
+* No `@SpringBootTest` due to external infrastructure dependencies
+* Mockito Inline Agent configured for JDK 21 compatibility
+* Keycloak security isolated from unit tests through dependency mocking
+
+This approach resulted in fast execution while maintaining strong confidence in application correctness.
+
+---
+
+# 12. Characteristics of Good Unit Tests
+
+Effective unit tests should be:
+
+* Fast
+* Independent
+* Repeatable
+* Self-validating
+* Easy to understand
+* Easy to maintain
+* Focused on one behavior
+* Reliable
+
+---
+
+# 13. Benefits of Unit Testing
+
+The implementation of unit testing in the Negotiated Rates System provided several advantages:
+
+* Early defect detection
+* Improved code quality
+* Higher software reliability
+* Faster debugging
+* Safer refactoring
+* Better documentation
+* Increased developer confidence
+* Reduced production risks
+* Easier long-term maintenance
+
+---
+
+# 14. Limitations of Unit Testing
+
+Although highly beneficial, unit testing has limitations.
+
+It does not:
+
+* Test complete system integration
+* Detect user interface issues
+* Replace end-to-end testing
+* Validate external infrastructure
+* Guarantee absence of defects
+
+Consequently, unit testing should be complemented by integration, system, and user acceptance testing.
+
+---
+
+# 15. Conclusion
+
+Unit testing played a significant role in improving the quality, reliability, and maintainability of the Negotiated Rates System developed during my internship at ABC Bank.
+
+By implementing a combination of **JUnit 5**, **Mockito**, and **Spring Data JPA integration testing**, I was able to validate business logic, controller functionality, repository operations, messaging components, configuration classes, and utility methods across the application.
+
+The project adopted a mixed testing strategy comprising approximately **90 automated tests**, with the majority implemented as isolated unit tests and repository-level integration tests using a dedicated PostgreSQL testing schema. This approach enabled rapid feedback during development while ensuring that critical business processes—such as negotiated rate requests, approvals, transfers, and persistence—were thoroughly verified.
+
+Overall, the testing strategy significantly improved software quality, reduced the likelihood of production defects, supported safe code refactoring, and contributed to delivering a robust and maintainable banking application.
+

@@ -1,0 +1,26 @@
+Fin code 000 - Successful
+Fin code 111 - Invalid scheme type
+Fin code 114 - Invalid account number
+Fin code 115 - Request not supported
+Fin code 116 - Insufficient funds
+Fin code 119 - Transaction not permitted for this account
+Fin code 121 - Transaction amount limit exceeded
+Fin code 163 - Invalid status
+Fin code 180 - Transfer Limit Exceeded
+Fin code 181 - Cheques are in different books
+Fin code 182 - Not all cheques could be stopped
+Fin code 183 - Cheque not issued to this account
+Fin code 184 - Account closed/frozen
+Fin code 185 - Invalid Currency/Transaction Amount
+Fin code 186 - Block does not exist
+Fin code 187 - Cheque stopped
+Fin code 188 - Invalid Rate Currency Combination
+Fin code 189 - Cheque Book Already Issued
+Fin code 190 - DD Already Paid
+Fin code 902 - Invalid transaction
+Fin code 904 - Format Error
+Fin code 906 - Cut-over in progress
+Fin code 907 - Bank service not available
+Fin code 909 - System malfunction
+Fin code 911 - Bank service timed out
+Fin code 913 - Duplicate transmission

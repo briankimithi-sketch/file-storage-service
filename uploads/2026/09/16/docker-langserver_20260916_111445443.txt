@@ -1,0 +1,226 @@
+Add proper form validation with error messages
+Add loading states for API calls
+Create a dedicated 404 page instead of inline "Welcome2"
+Add responsive design for mobile devices
+Improve form styling with better visual feedback
+
+
+A. Reject/deny rate requests
+
+B. Search/filter requests
+i. Added search input field in PendingRequests.js with placeholder text
+ii. Added searchTerm state and handleSearchChange handler
+iii. Added filteredRequests function that filters by customer name, source     currency, and destination currency
+iv. Added "No requests match your search" message when search returns no results
+v. Added unit tests for search/filter logic in ViewRequest.test.js}
+
+C. Export to CSV/PDF
+ i. Added CSV and PDF export functionality to PendingRequests.js:
+
+ ii. exportToCSV(): Generates and downloads a CSV file with request data
+ iii. exportToPDF(): Opens a printable HTML page with formatted table
+ iv. Buttons added next to search input, disabled when no filtered results
+ 
+D. Role-based access control
+ Updated App.js to use these components for conditional rendering based on authentication
+Updated Aside.jsx to conditionally show "Pending Requests" menu only for users with rate_request_admin or admin roles
+Added getTokenParsed() and getRoles() to UserService.js
+Created Welcome.js component for anonymous users
+All components now properly handle role-based visibility
+
+E. Audit history view
+
+
+SECURITY DEMO>
+1.	Fix the CORS configuration to restrict origins
+
+2.	Add proper CSRF token handling for the SPA
+
+src/main/frontend/src/api/axios.js — Created a configured axios instance that reads the XSRF-TOKEN cookie and automatically sets the X-XSRF-TOKEN header on all requests, with withCredentials: true.
+src/main/frontend/src/components/Login.jsx — Converted from direct form submission to an API POST via the configured axios instance.
+src/main/frontend/src/components/Home.jsx — Updated to use the shared axios instance.
+src/main/frontend/src/components/Greeting.jsx — Updated to use the shared axios instance.
+
+3.###	Add rate limiting / account lockout(the reason i cant log in)
+
+4.	Implement basic role-based access control
+
+5.	Create the missing Login.css file
+
+6.	Fix the Docker Compose port binding
+
+7.      Add security headers configuration
+
+
+
+STORE APP
+Structural / Architecture
+
+Service layer: Extract business logic from controllers into services to decouple controllers from the data layer.
+
+DTOs: Decouple API contracts from JPA entities; don't expose entities directly as request/response payloads.
+
+Pagination/Sorting: Replace findAll() with Pageable support to handle large datasets.
+
+Global exception handling: Add @RestControllerAdvice to handle cases like NoSuchEntityException in OrderController:28.
+Data & Validation
+
+Input validation: Add jakarta.validation constraints (@NotBlank, @Email, @Positive, @Min) to entities or DTOs, enabled via @Valid in controllers.
+JPA mapping: Add @JoinTable on Order.products (Order.java:17) and define cascade/fetch types explicitly.
+Database migration: Replace H2 with PostgreSQL/MySQL for production and add Flyway or Liquibase for schema versioning.
+Security
+
+Password encoding: Never store plain text passwords; integrate Spring Security with BCrypt.
+Authentication/Authorization: Add JWT or session-based auth to protect endpoints.
+Observability
+
+API documentation: Add SpringDoc/OpenAPI to document available endpoints.
+Logging: Configure structured logging (e.g., Logback) with request/response logging.
+Testing
+
+Expand beyond contextLoads() with controller tests (@WebMvcTest), service unit tests, and repository integration tests.
+
+
+
+CUSTOM EXCEPTION
+No @RestControllerAdvice global exception handler
+Other controllers (RateAcceptController, TransferController, etc.) manually build DTOResponse 400 responses instead of throwing BadRequestException
+No custom exceptions for other error types (e.g., NotFoundException, ForbiddenException, MailSendException)
+
+
+
+fsghshabnnbnmn nbbcxruk./lp9o87654sxfczawsgb
+
+
+
+
+
+
+
+Report on Custom Exception to Negotiated Rates
+Prepared by: Brian Kimithi
+Position: ICT Department Intern
+Organization: ABC Bank Email: briankimithi@gmail.com Phone: 0719307495
+
+Date: 22 July 2026
+
+Purpose
+This report is submitted to explain the need for a custom exception to the negotiated rates and to provide the justification for the requested adjustment.
+
+Background
+ABC Bank has established negotiated rates to ensure consistency, cost efficiency, and compliance with institutional policies. During the course of operations, a situation arose that required an exception to the agreed negotiated rates in order to address specific operational needs.
+
+Exception Details
+Standard Negotiated Rate: [Insert standard negotiated rate]
+Requested Exception Rate: [Insert exception rate]
+Effective Date: [Insert effective date]
+Department/Service Affected: ICT Department
+Reason for the Exception
+The custom exception is requested for the following reasons:
+
+The standard negotiated rate does not adequately accommodate the specific operational requirements of the transaction or service.
+The exception is necessary to ensure timely delivery of critical ICT-related services and to avoid delays that could affect business operations.
+Granting the exception supports business continuity while maintaining the quality and reliability of the required service.
+The proposed adjustment aligns with the bank's operational objectives and provides value despite deviating from the standard negotiated rate.
+Impact Assessment
+Approving the custom exception is expected to:
+
+Support uninterrupted ICT operations.
+Improve efficiency in service delivery.
+Minimize operational risks associated with delays or service limitations.
+Maintain positive business relationships while ensuring that the bank's operational needs are met.
+Any financial impact resulting from the exception should be assessed against the operational benefits and long-term value provided.
+
+Recommendation
+Based on the circumstances outlined above, I recommend approval of the custom exception to the negotiated rates. The exception is justified by the operational requirements and is intended to support efficient service delivery while safeguarding the bank's interests.
+
+Conclusion
+The requested custom exception represents a practical and justified adjustment to the negotiated rates. Approval of this request will facilitate smooth operations within the ICT Department while continuing to uphold the bank's commitment to efficiency, compliance, and service excellence.
+
+Submitted by:
+
+Brian Kimithi
+ICT Department Intern
+ABC Bank
+Email: briankimithi@gmail.com
+Phone: 0719307495
+
+
+
+
+
+
+
+
+
+STORAGE SERVICE..
+
+
+Project instruction compliance review
+7%
+
+Let me read the remaining files to complete my analysis.
+
+Now I have all the files. Let me analyze each requirement against the code:
+
+API Endpoints:
+POST /api/files/upload: ✅ Present in FileController.java (line 25-35). Accepts @RequestParam("file") MultipartFile file. Returns JSON with id, originalName, size, downloadUrl.
+GET /api/files/download/{fileId}: ✅ Present in FileController.java (line 37-44). Uses Resource (FileSystemResource) and HttpHeaders.CONTENT_DISPOSITION with "attachment; filename="" + file.getFilename() + """. Uses MediaType.APPLICATION_OCTET_STREAM. However, it doesn't return the original file name in the Content-Type header per se - it sets Content-Disposition with filename. But the requirement says "correct Content-Type headers" - this is using APPLICATION_OCTET_STREAM which is generic. A better approach would be to detect and use the actual content type from the stored file (contentType field). Also, the requirement mentions "StreamingResponseBody or Resource" - it uses Resource, which is acceptable.
+DELETE /api/files/{fileId}: ✅ Present in FileController.java (line 46-50). Returns ResponseEntity.noContent() (204).
+Storage Architecture:
+Storage Service interface: ✅ Present in StorageService.java. Has store(MultipartFile file), loadAsResource(Long fileId), delete(Long fileId).
+FileSystemStorageService implementation: ✅ Present in FileSystemStorageService.java.
+Configurable root directory: ✅ Defined in application.properties as filestorage.root=uploads. Injected in FileSystemStorageService constructor via @Value("${filestorage.root}").
+Security, Validation, and Safety:
+File Renaming: ✅ Uses UUID.randomUUID() in filename (line 34: String filename = UUID.randomUUID() + "_" + file.getOriginalFilename()). However, this still retains the original filename suffix. The requirement says "Generate a unique identifier (e.g., UUID.randomUUID().toString()) for each file." The current implementation does generate a UUID prefix but keeps the original name. While this isn't the MOST secure (since original name is preserved in the prefix), it does prevent path traversal since it's not using the original name directly as the filename. The UUID is the actual file on disk. This is mostly acceptable but technically the code appends the original filename.
+Size Restrictions: ✅ application.properties has spring.servlet.multipart.max-file-size=50MB and max-request-size=50MB. However, the requirement example says "e.g., max file size 5MB, max request size 5MB". The current values are 50MB, which is larger than the example but still a restriction. GlobalExceptionHandler has handler for MaxUploadSizeExceededException returning 413.
+Input Validation: ✅ FileSystemStorageService checks if file.isEmpty() and throws IllegalArgumentException. However, there's no file extension validation/restriction logic as mentioned in the requirement ("ensure the upload logic validates file extensions if restricted").
+Exception Handling:
+@ControllerAdvice: ✅ GlobalExceptionHandler.java has @ControllerAdvice.
+File not found (404): ✅ Handled by handleRuntime which maps RuntimeException to NOT_FOUND (404). However, this is too broad - it catches ALL RuntimeExceptions as 404, including storage failures and disk errors. The requirement distinguishes between 404 (file not found), 500 (storage failures/disk errors).
+File size exceeded (413): ✅ Handled by handleMaxSize returning CONTENT_TOO_LARGE (413).
+Storage failures/Disk errors (500): ❌ There is no specific handler for disk/storage failures. Also, IOException is not handled - it propagates up (since FileController methods throw IOException or don't catch them). In Spring, unhandled exceptions typically result in 500, but the requirement asks for a global exception handler. The handler for RuntimeException catches everything, including what should be 500 errors, and maps them to 404, which is incorrect.
+Other observations:
+
+FileSystemStorageService.store() method appends the original filename (line 34: String filename = UUID.randomUUID() + "_" + file.getOriginalFilename()). This could still be problematic in some contexts, though less so than using only the original name. The requirement says "Do not save files using their original names" - this technically does not save using only the original names, it uses UUID prefix. However, the original name IS preserved in the file system name. A stricter interpretation would be to use purely the UUID.
+The catch-all RuntimeException handler is dangerous: it means any unrelated error (NullPointerException, disk full during copy, etc.) will return 404 Not Found instead of 500.
+The path stored in filePath is just the filename in the root directory: destination.toString(). This is relative to the working directory. If filestorage.root=uploads, the filePath will be uploads/UUID_originalName. This could be an issue if the working directory changes or if the path is absolute/relative.
+In download endpoint, the filename in Content-Disposition uses file.getFilename() which comes from FileSystemResource. This will be the UUID-prefixed filename, not the original filename. The requirement says return the file with "correct Content-Type headers" - using APPLICATION_OCTET_STREAM for everything is not ideal, it should probably use the stored contentType.
+The application properties show PostgreSQL datasource configured, which meets "The database of choice is PostgreSQL" requirement.
+Let me structure the feedback clearly.
+
+Feedback against your requirements:
+
+1. API Endpoints
+Requirement	Status	Notes
+POST /api/files/upload	✅ Implemented	Accepts MultipartFile, returns JSON with id, originalName, size, downloadUrl
+GET /api/files/download/{fileId}	⚠️ Partial	Uses Resource and Content-Disposition, but hardcodes MediaType.APPLICATION_OCTET_STREAM for all files instead of using the stored contentType from the database. Also returns the UUID-prefixed filename in Content-Disposition rather than the original name.
+DELETE /api/files/{fileId}	✅ Implemented	Permanently deletes file and database record, returns 204 No Content
+2. Storage Architecture
+Requirement	Status	Notes
+StorageService interface	✅ Implemented	Defines store(MultipartFile), loadAsResource(Long fileId), delete(Long fileId)
+FileSystemStorageService	✅ Implemented	Uses configurable filestorage.root from application.properties
+Configurable root directory	✅ Implemented	Set via @Value("${filestorage.root}")
+3. Security, Validation, and Safety
+Requirement	Status	Notes
+File renaming (no original names)	⚠️ Partial	Uses UUID.randomUUID() as prefix but appends the original filename (UUID + "_" + originalFilename). Requirement explicitly says "Do not save files using their original names". Consider using pure UUID.randomUUID().toString().
+Size restrictions	⚠️ Partial	Properties set to 50MB (example said 5MB), and MaxUploadSizeExceededException handler returns 413.
+Reject empty files	✅ Implemented	FileSystemStorageService.store() checks file.isEmpty()
+Extension validation	❌ Missing	No logic present to validate or restrict file extensions
+4. Exception Handling
+Requirement	Status	Notes
+@ControllerAdvice	✅ Implemented	Global handler present
+File not found -> 404	⚠️ Partially correct	Handled via RuntimeException catch-all, but...
+File size exceeded -> 413	✅ Implemented	Returns HttpStatus.CONTENT_TOO_LARGE
+Storage failures/Disk errors -> 500	❌ Incorrect	All RuntimeExceptions (including disk failures) are mapped to 404 NOT_FOUND. IOException is also not caught and may fall through to Spring's default handling. You should separate FileNotFoundException/custom not-found from general storage exceptions.
+Additional Observations
+Database: PostgreSQL is correctly configured (spring.datasource.url, driver-class-name, PostgreSQLDialect).
+Path handling: FileSystemStorageService stores relative paths (uploads/UUID_originalName). This is workable but ensure the uploads directory exists relative to the working directory.
+download URL: The response returns /api/files/download/... which is correct.
+Summary
+Your project covers all four major requirement areas, but has gaps in exception granularity, missing file extension validation, and the file naming still retains the original filename despite the UUID prefix.
+
+
+
+
+
