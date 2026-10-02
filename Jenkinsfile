@@ -22,7 +22,7 @@ pipeline {
                     docker network inspect "$RABBITMQ_NETWORK" >/dev/null 2>&1 || \
                         docker network create "$RABBITMQ_NETWORK"
 
-                    echo "=== Removing old RabbitMQ container if present ==="
+                    echo "=== Removing old RabbitMQ container ==="
 
                     docker rm -f "$RABBITMQ_CONTAINER" >/dev/null 2>&1 || true
 
@@ -36,19 +36,36 @@ pipeline {
                         -e RABBITMQ_DEFAULT_PASS="$RABBITMQ_PASSWORD" \
                         rabbitmq:3-management
 
-                    echo "=== Waiting for RabbitMQ ==="
+                    echo "=== Waiting for RabbitMQ to become ready ==="
 
-                    for i in $(seq 1 30); do
+                    READY=false
+
+                    for i in $(seq 1 60); do
                         if docker exec "$RABBITMQ_CONTAINER" \
                             rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
 
                             echo "RabbitMQ is ready."
+                            READY=true
                             break
                         fi
 
-                        echo "Waiting for RabbitMQ... ($i/30)"
+                        if ! docker ps --format '{{.Names}}' | grep -q "^${RABBITMQ_CONTAINER}\$"; then
+                            echo "ERROR: RabbitMQ container stopped unexpectedly."
+                            docker logs "$RABBITMQ_CONTAINER" || true
+                            exit 1
+                        fi
+
+                        echo "Waiting for RabbitMQ... ($i/60)"
                         sleep 2
                     done
+
+                    if [ "$READY" != "true" ]; then
+                        echo "ERROR: RabbitMQ did not become ready within 120 seconds."
+                        docker logs "$RABBITMQ_CONTAINER" || true
+                        exit 1
+                    fi
+
+                    echo "=== RabbitMQ health check ==="
 
                     docker exec "$RABBITMQ_CONTAINER" \
                         rabbitmq-diagnostics -q ping
@@ -61,16 +78,23 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "=== Resolving RabbitMQ ==="
+                    echo "=== RabbitMQ DNS ==="
 
                     docker exec jenkins getent hosts "$RABBITMQ_HOST"
 
-                    echo "=== Testing RabbitMQ TCP connection ==="
+                    echo "=== RabbitMQ TCP connection ==="
 
                     docker exec jenkins bash -c \
                         'timeout 5 bash -c "</dev/tcp/rabbitmq/5672"'
 
                     echo "RabbitMQ TCP connection OK."
+
+                    echo "=== RabbitMQ authentication ==="
+
+                    docker exec "$RABBITMQ_CONTAINER" \
+                        rabbitmqctl authenticate_user \
+                        "$RABBITMQ_USER" \
+                        "$RABBITMQ_PASSWORD"
                 '''
             }
         }
@@ -84,6 +108,8 @@ pipeline {
         stage('Test') {
             steps {
                 sh '''
+                    set -e
+
                     SPRING_RABBITMQ_HOST="$RABBITMQ_HOST" \
                     SPRING_RABBITMQ_PORT="$RABBITMQ_PORT" \
                     SPRING_RABBITMQ_USERNAME="$RABBITMQ_USER" \
