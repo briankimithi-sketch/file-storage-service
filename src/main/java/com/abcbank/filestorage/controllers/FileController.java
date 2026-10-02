@@ -2,6 +2,7 @@ package com.abcbank.filestorage.controllers;
 
 import com.abcbank.filestorage.entities.StoredFile;
 import com.abcbank.filestorage.services.StorageService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,70 +19,101 @@ import java.util.Map;
 public class FileController {
 
     private final StorageService storageService;
+    private final String backendBaseUrl;
 
-    public FileController(StorageService storageService) {
+    public FileController(
+            StorageService storageService,
+            @Value("${filestorage.base-url:http://localhost:8080}")
+            String backendBaseUrl
+    ) {
         this.storageService = storageService;
+        this.backendBaseUrl = backendBaseUrl.replaceAll("/$", "");
     }
 
-    
     @GetMapping
     public ResponseEntity<List<StoredFile>> findAll() {
         return ResponseEntity.ok(storageService.findAll());
     }
 
-   
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<Map<String, Object>> upload(
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+
         StoredFile storedFile = storageService.store(file);
 
-    
         Map<String, Object> response = Map.of(
                 "originalName", storedFile.getOriginalName(),
                 "size", storedFile.getSize(),
-                "downloadUrl", "/files/download/" + storedFile.getOriginalName(),
-                "viewUrl", "/files/" + storedFile.getOriginalName()
+                "downloadUrl",
+                backendBaseUrl + "/files/download/" + storedFile.getOriginalName(),
+                "viewUrl",
+                backendBaseUrl + "/files/" + storedFile.getOriginalName()
         );
 
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/download/{filename:.+}")
-    public ResponseEntity<Resource> download(@PathVariable String filename) {
-        StoredFile storedFile = storageService.findByOriginalNameOrThrow(filename);
-        Resource resource = storageService.loadAsResource(storedFile);
+    public ResponseEntity<Resource> download(
+            @PathVariable String filename
+    ) {
+        StoredFile storedFile =
+                storageService.findByOriginalNameOrThrow(filename);
+
+        Resource resource =
+                storageService.loadAsResource(storedFile);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + storedFile.getOriginalName() + "\"")
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" +
+                                storedFile.getOriginalName() +
+                                "\""
+                )
                 .contentType(getContentType(storedFile))
                 .body(resource);
     }
 
-    
     @GetMapping("/{filename:.+}")
-    public ResponseEntity<Resource> view(@PathVariable String filename) {
-        StoredFile storedFile = storageService.findByOriginalNameOrThrow(filename);
-        Resource resource = storageService.loadAsResource(storedFile);
+    public ResponseEntity<Resource> view(
+            @PathVariable String filename
+    ) {
+        StoredFile storedFile =
+                storageService.findByOriginalNameOrThrow(filename);
+
+        Resource resource =
+                storageService.loadAsResource(storedFile);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"" + storedFile.getOriginalName() + "\"")
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" +
+                                storedFile.getOriginalName() +
+                                "\""
+                )
                 .contentType(getContentType(storedFile))
                 .body(resource);
     }
 
-    
     @DeleteMapping("/{filename:.+}")
-    public ResponseEntity<Void> delete(@PathVariable String filename) throws IOException {
+    public ResponseEntity<Void> delete(
+            @PathVariable String filename
+    ) throws IOException {
+
         storageService.deleteByFilename(filename);
+
         return ResponseEntity.noContent().build();
     }
 
     private MediaType getContentType(StoredFile storedFile) {
+
         String contentType = storedFile.getContentType();
+
         if (contentType == null || contentType.isBlank()) {
             return MediaType.APPLICATION_OCTET_STREAM;
         }
+
         try {
             return MediaType.parseMediaType(contentType);
         } catch (IllegalArgumentException e) {
@@ -89,4 +121,3 @@ public class FileController {
         }
     }
 }
-

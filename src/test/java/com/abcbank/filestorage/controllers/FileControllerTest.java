@@ -1,8 +1,8 @@
 package com.abcbank.filestorage.controllers;
 
 import com.abcbank.filestorage.entities.StoredFile;
-import com.abcbank.filestorage.services.StorageService;
 import com.abcbank.filestorage.exceptions.GlobalExceptionHandler;
+import com.abcbank.filestorage.services.StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ByteArrayResource;
@@ -10,8 +10,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.util.Map;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -27,42 +25,36 @@ class FileControllerTest {
     @BeforeEach
     void setUp() {
 
-        storageService =
-                mock(StorageService.class);
+        storageService = mock(StorageService.class);
 
-        FileController controller =
-                new FileController(storageService);
+        FileController controller = new FileController(
+                storageService,
+                "http://localhost:8080"
+        );
 
-        mockMvc =
-                MockMvcBuilders
-                        .standaloneSetup(controller)
-                        .setControllerAdvice(
-                                new GlobalExceptionHandler()
-                        )
-                        .build();
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
     void testUploadFile() throws Exception {
 
-        StoredFile stored =
-                new StoredFile();
+        StoredFile stored = new StoredFile();
 
         stored.setOriginalName("hello.txt");
         stored.setSize(11);
         stored.setContentType("text/plain");
-
         stored.setDownloadUrl(
                 "http://localhost:8080/files/download/hello.txt"
         );
-
         stored.setViewUrl(
                 "http://localhost:8080/files/hello.txt"
         );
 
-        when(
-                storageService.store(any())
-        ).thenReturn(stored);
+        when(storageService.store(any()))
+                .thenReturn(stored);
 
         mockMvc.perform(
                         multipart("/files/upload")
@@ -93,31 +85,25 @@ class FileControllerTest {
                                 )
                 );
 
-        verify(
-                storageService,
-                times(1)
-        ).store(any());
+        verify(storageService, times(1))
+                .store(any());
     }
 
     @Test
     void testDownloadFile() throws Exception {
 
-        StoredFile stored =
-                new StoredFile();
+        StoredFile stored = new StoredFile();
 
         stored.setOriginalName("hello.txt");
         stored.setContentType("text/plain");
         stored.setSize(11);
 
-        Resource resource =
-                new ByteArrayResource(
-                        "Hello World".getBytes()
-                );
+        Resource resource = new ByteArrayResource(
+                "Hello World".getBytes()
+        );
 
         when(
-                storageService.findByOriginalNameOrThrow(
-                        "hello.txt"
-                )
+                storageService.findByOriginalNameOrThrow("hello.txt")
         ).thenReturn(stored);
 
         when(
@@ -135,17 +121,13 @@ class FileControllerTest {
                         )
                 )
                 .andExpect(
-                        content().contentType(
-                                MediaType.TEXT_PLAIN
-                        )
+                        content().contentType(MediaType.TEXT_PLAIN)
                 );
 
         verify(
                 storageService,
                 times(1)
-        ).findByOriginalNameOrThrow(
-                "hello.txt"
-        );
+        ).findByOriginalNameOrThrow("hello.txt");
 
         verify(
                 storageService,
@@ -154,13 +136,10 @@ class FileControllerTest {
     }
 
     @Test
-    void testDownloadFileNotFound()
-            throws Exception {
+    void testDownloadFileNotFound() throws Exception {
 
         when(
-                storageService.findByOriginalNameOrThrow(
-                        "missing.txt"
-                )
+                storageService.findByOriginalNameOrThrow("missing.txt")
         ).thenThrow(
                 new com.abcbank.filestorage.exceptions.FileNotFoundException(
                         "missing.txt"
@@ -170,37 +149,29 @@ class FileControllerTest {
         mockMvc.perform(
                         get("/files/download/missing.txt")
                 )
-                .andExpect(
-                        status().isNotFound()
-                );
+                .andExpect(status().isNotFound());
 
         verify(
                 storageService,
                 times(1)
-        ).findByOriginalNameOrThrow(
-                "missing.txt"
-        );
+        ).findByOriginalNameOrThrow("missing.txt");
     }
 
     @Test
     void testViewFile() throws Exception {
 
-        StoredFile stored =
-                new StoredFile();
+        StoredFile stored = new StoredFile();
 
         stored.setOriginalName("hello.txt");
         stored.setContentType("text/plain");
         stored.setSize(11);
 
-        Resource resource =
-                new ByteArrayResource(
-                        "Hello World".getBytes()
-                );
+        Resource resource = new ByteArrayResource(
+                "Hello World".getBytes()
+        );
 
         when(
-                storageService.findByOriginalNameOrThrow(
-                        "hello.txt"
-                )
+                storageService.findByOriginalNameOrThrow("hello.txt")
         ).thenReturn(stored);
 
         when(
@@ -218,17 +189,13 @@ class FileControllerTest {
                         )
                 )
                 .andExpect(
-                        content().contentType(
-                                MediaType.TEXT_PLAIN
-                        )
+                        content().contentType(MediaType.TEXT_PLAIN)
                 );
 
         verify(
                 storageService,
                 times(1)
-        ).findByOriginalNameOrThrow(
-                "hello.txt"
-        );
+        ).findByOriginalNameOrThrow("hello.txt");
 
         verify(
                 storageService,
@@ -241,28 +208,21 @@ class FileControllerTest {
 
         doNothing()
                 .when(storageService)
-                .deleteByFilename(
-                        "hello.txt"
-                );
+                .deleteByFilename("hello.txt");
 
         mockMvc.perform(
                         delete("/files/hello.txt")
                 )
-                .andExpect(
-                        status().isNoContent()
-                );
+                .andExpect(status().isNoContent());
 
         verify(
                 storageService,
                 times(1)
-        ).deleteByFilename(
-                "hello.txt"
-        );
+        ).deleteByFilename("hello.txt");
     }
 
     @Test
-    void testDeleteFileNotFound()
-            throws Exception {
+    void testDeleteFileNotFound() throws Exception {
 
         doThrow(
                 new com.abcbank.filestorage.exceptions.FileNotFoundException(
@@ -270,22 +230,16 @@ class FileControllerTest {
                 )
         )
                 .when(storageService)
-                .deleteByFilename(
-                        "missing.txt"
-                );
+                .deleteByFilename("missing.txt");
 
         mockMvc.perform(
                         delete("/files/missing.txt")
                 )
-                .andExpect(
-                        status().isNotFound()
-                );
+                .andExpect(status().isNotFound());
 
         verify(
                 storageService,
                 times(1)
-        ).deleteByFilename(
-                "missing.txt"
-        );
+        ).deleteByFilename("missing.txt");
     }
 }
