@@ -68,6 +68,27 @@ pipeline {
                         rabbitmq:3-management \
                         bash -c 'ls -lan /var/lib/rabbitmq'
 
+                    echo "=== PIPELINE IDENTITY ==="
+                    id
+                    hostname
+                    pwd
+                    echo "WORKSPACE=$WORKSPACE"
+
+                    echo "=== DOCKER CONTEXT ==="
+                    docker context show
+                    docker info --format 'RootDir={{.DockerRootDir}} Driver={{.Driver}} Server={{.ServerVersion}}'
+
+                    echo "=== VOLUME BEFORE RABBITMQ START ==="
+                    docker volume inspect "$RABBITMQ_VOLUME"
+
+                    echo "=== VOLUME CONTENTS BEFORE RABBITMQ START ==="
+                    docker run --rm                         --user root                         --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq"                         rabbitmq:3-management                         bash -c '
+                            echo "DIRECTORY:"
+                            stat -c "%A %a %u:%g %n" /var/lib/rabbitmq
+                            echo "CONTENTS:"
+                            ls -lan /var/lib/rabbitmq
+                        '
+
                     echo "=== Starting RabbitMQ ==="
 
                     docker run -d \
@@ -78,6 +99,23 @@ pipeline {
                         -e RABBITMQ_DEFAULT_USER="$RABBITMQ_USER" \
                         -e RABBITMQ_DEFAULT_PASS="$RABBITMQ_PASSWORD" \
                         rabbitmq:3-management
+
+                    echo "=== IMMEDIATE RABBITMQ STATUS ==="
+                    docker inspect "$RABBITMQ_CONTAINER"                         --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} Error={{.State.Error}}'
+
+                    echo "=== IMMEDIATE VOLUME CONTENTS ==="
+                    docker run --rm                         --user root                         --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq"                         rabbitmq:3-management                         bash -c '
+                            echo "DIRECTORY:"
+                            stat -c "%A %a %u:%g %n" /var/lib/rabbitmq
+                            echo "CONTENTS:"
+                            ls -lan /var/lib/rabbitmq || true
+                            echo "COOKIE:"
+                            if [ -e /var/lib/rabbitmq/.erlang.cookie ]; then
+                                stat -c "%A %a %u:%g %n" /var/lib/rabbitmq/.erlang.cookie
+                            else
+                                echo "COOKIE DOES NOT EXIST"
+                            fi
+                        '
 
                     echo "=== Waiting for RabbitMQ to become ready ==="
 
