@@ -23,6 +23,26 @@ pipeline {
         POSTGRES_DB        = 'file_storage_db'
         POSTGRES_USER      = 'postgres'
         POSTGRES_PASSWORD  = 'cipassword'
+
+        // ==========================================
+        // Runtime / CD Configuration
+        // ==========================================
+        RUNTIME_NETWORK           = 'file-storage-runtime'
+        RUNTIME_POSTGRES          = 'file-storage-postgres-runtime'
+        RUNTIME_RABBITMQ          = 'file-storage-rabbitmq-runtime'
+        RUNTIME_BACKEND           = 'file-storage-backend-runtime'
+
+        RUNTIME_POSTGRES_VOLUME   = 'file-storage-postgres-runtime-volume'
+        RUNTIME_RABBITMQ_VOLUME   = 'file-storage-rabbitmq-runtime-volume'
+
+        RUNTIME_POSTGRES_DB       = 'file_storage_db'
+        RUNTIME_POSTGRES_USER     = 'postgres'
+        RUNTIME_POSTGRES_PASSWORD = 'brian'
+
+        RUNTIME_RABBITMQ_USER     = 'guest'
+        RUNTIME_RABBITMQ_PASSWORD = 'guest'
+
+        RUNTIME_BACKEND_PORT      = '8082'
     }
 
     stages {
@@ -315,6 +335,147 @@ pipeline {
         // =========================================================
         // ARCHIVE
         // =========================================================
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    set -e
+
+                    echo "=========================================="
+                    echo "Building Docker image"
+                    echo "=========================================="
+
+                    docker build \
+                        -t file-storage-service:${BUILD_NUMBER} \
+                        -t file-storage-service:latest \
+                        .
+                '''
+            }
+        }
+
+        stage('Deploy Runtime') {
+            steps {
+                sh '''
+                    set -e
+
+                    echo "=========================================="
+                    echo "Deploying runtime environment"
+                    echo "=========================================="
+
+                    echo "=== Creating runtime network ==="
+                    docker network inspect "$RUNTIME_NETWORK" >/dev/null 2>&1 || \
+                docker network create "$RUNTIME_NETWORK"
+
+                    echo "=== Creating persistent volumes ==="
+                    docker volume inspect "$RUNTIME_POSTGRES_VOLUME" >/dev/null 2>&1 || \
+                docker volume create "$RUNTIME_POSTGRES_VOLUME"
+
+                    docker volume inspect "$RUNTIME_RABBITMQ_VOLUME" >/dev/null 2>&1 || \
+                docker volume create "$RUNTIME_RABBITMQ_VOLUME"
+
+                    echo "=== Replacing PostgreSQL runtime container ==="
+                    docker rm -f "$RUNTIME_POSTGRES" >/dev/null 2>&1 || true
+
+                    docker run -d \
+                --name "$RUNTIME_POSTGRES" \
+                --network "$RUNTIME_NETWORK" \
+                --mount "source=$RUNTIME_POSTGRES_VOLUME,target=/var/lib/postgresql/data" \
+                -e POSTGRES_DB="$RUNTIME_POSTGRES_DB" \
+                -e POSTGRES_USER="$RUNTIME_POSTGRES_USER" \
+                -e POSTGRES_PASSWORD="$RUNTIME_POSTGRES_PASSWORD" \
+                -p 5433:5432 \
+                postgres:16
+
+                    echo "=== Waiting for PostgreSQL ==="
+                    for i in $(seq 1 30); do
+                        if docker exec "$RUNTIME_POSTGRES" \
+                    pg_isready -U "$RUNTIME_POSTGRES_USER" -d "$RUNTIME_POSTGRES_DB" >/dev/null 2>&1; then
+                            echo "PostgreSQL is ready."
+                            break
+                        fi
+
+                        if [ "$i" -eq 30 ]; then
+                            echo "ERROR: PostgreSQL did not become ready."
+                            docker logs "$RUNTIME_POSTGRES" || true
+                            exit 1
+                        fi
+
+                        sleep 2
+                    done
+
+                    echo "=== Replacing RabbitMQ runtime container ==="
+                    docker rm -f "$RUNTIME_RABBITMQ" >/dev/null 2>&1 || true
+
+                    docker run -d \
+                --name "$RUNTIME_RABBITMQ" \
+                --network "$RUNTIME_NETWORK" \
+                --mount "source=$RUNTIME_RABBITMQ_VOLUME,target=/var/lib/rabbitmq" \
+                -e RABBITMQ_DEFAULT_USER="$RUNTIME_RABBITMQ_USER" \
+                -e RABBITMQ_DEFAULT_PASS="$RUNTIME_RABBITMQ_PASSWORD" \
+                -p 5673:5672 \
+                rabbitmq:3-management
+
+                    echo "=== Waiting for RabbitMQ ==="
+                    for i in $(seq 1 30); do
+                        if docker exec "$RUNTIME_RABBITMQ" \
+                    rabbitmq-diagnostics -q check_running >/dev/null 2>&1; then
+                            echo "RabbitMQ is ready."
+                            break
+                        fi
+
+                        if [ "$i" -eq 30 ]; then
+                            echo "ERROR: RabbitMQ did not become ready."
+                            docker logs "$RUNTIME_RABBITMQ" || true
+                            exit 1
+                        fi
+
+                        sleep 2
+                    done
+
+                    echo "=== Replacing backend runtime container ==="
+                    docker rm -f "$RUNTIME_BACKEND" >/dev/null 2>&1 || true
+
+                    docker run -d \
+                --name "$RUNTIME_BACKEND" \
+                --network "$RUNTIME_NETWORK" \
+                -p "$RUNTIME_BACKEND_PORT:8080" \
+                -e SPRING_DATASOURCE_HOST="$RUNTIME_POSTGRES" \
+                -e SPRING_DATASOURCE_PORT=5432 \
+                -e SPRING_DATASOURCE_DB="$RUNTIME_POSTGRES_DB" \
+                -e SPRING_DATASOURCE_USERNAME="$RUNTIME_POSTGRES_USER" \
+                -e SPRING_DATASOURCE_PASSWORD="$RUNTIME_POSTGRES_PASSWORD" \
+                -e SPRING_RABBITMQ_HOST="$RUNTIME_RABBITMQ" \
+                -e SPRING_RABBITMQ_PORT=5672 \
+                -e SPRING_RABBITMQ_USERNAME="$RUNTIME_RABBITMQ_USER" \
+                -e SPRING_RABBITMQ_PASSWORD="$RUNTIME_RABBITMQ_PASSWORD" \
+                file-storage-service:${BUILD_NUMBER}
+
+                    echo "=== Waiting for backend ==="
+                    for i in $(seq 1 30); do
+                        if docker run --rm \
+                    --network "$RUNTIME_NETWORK" \
+                    curlimages/curl:8.10.1 \
+                    -fsS http://"$RUNTIME_BACKEND":8080 >/dev/null 2>&1; then
+                            echo "Backend is ready."
+                            break
+                        fi
+
+                        if [ "$i" -eq 30 ]; then
+                            echo "ERROR: Backend did not become ready."
+                            docker logs "$RUNTIME_BACKEND" || true
+                            exit 1
+                        fi
+
+                        sleep 2
+                    done
+
+                    echo "=========================================="
+                    echo "Runtime deployment completed successfully."
+                    echo "Backend: http://localhost:$RUNTIME_BACKEND_PORT"
+                    echo "=========================================="
+                '''
+            }
+        }
+
         stage('Archive') {
             steps {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
