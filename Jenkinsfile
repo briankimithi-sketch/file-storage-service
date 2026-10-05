@@ -54,6 +54,20 @@ pipeline {
 
                     docker volume create "$RABBITMQ_VOLUME"
 
+                    echo "=== Initializing RabbitMQ volume permissions ==="
+                    docker run --rm \
+                        --user root \
+                        --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq" \
+                        rabbitmq:3-management \
+                        bash -c 'mkdir -p /var/lib/rabbitmq && chown -R rabbitmq:rabbitmq /var/lib/rabbitmq'
+
+                    echo "=== Verifying RabbitMQ volume permissions ==="
+                    docker run --rm \
+                        --user root \
+                        --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq" \
+                        rabbitmq:3-management \
+                        bash -c 'ls -lan /var/lib/rabbitmq'
+
                     echo "=== Starting RabbitMQ ==="
 
                     docker run -d \
