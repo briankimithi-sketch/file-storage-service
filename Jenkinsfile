@@ -39,93 +39,37 @@ pipeline {
                     echo "Preparing RabbitMQ CI network"
                     echo "=========================================="
 
-                    docker network inspect "$RABBITMQ_NETWORK" >/dev/null 2>&1 || \
-                        docker network create "$RABBITMQ_NETWORK"
-
                     echo "=== Removing old RabbitMQ container ==="
-
                     docker rm -f "$RABBITMQ_CONTAINER" >/dev/null 2>&1 || true
 
                     echo "=== Removing old RabbitMQ volume ==="
-
                     docker volume rm "$RABBITMQ_VOLUME" >/dev/null 2>&1 || true
 
-                    echo "=== Creating fresh RabbitMQ volume ==="
+                    echo "=== Preparing RabbitMQ CI network ==="
+                    docker network inspect "$RABBITMQ_NETWORK" >/dev/null 2>&1 || \
+                        docker network create "$RABBITMQ_NETWORK"
 
+                    echo "=== Creating fresh RabbitMQ volume ==="
                     docker volume create "$RABBITMQ_VOLUME"
 
-                    echo "=== Initializing RabbitMQ volume permissions ==="
-                    docker run --rm \
-                        --user root \
-                        --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq" \
-                        rabbitmq:3-management \
-                        bash -c 'mkdir -p /var/lib/rabbitmq && chown -R rabbitmq:rabbitmq /var/lib/rabbitmq'
-
-                    echo "=== Verifying RabbitMQ volume permissions ==="
-                    docker run --rm \
-                        --user root \
-                        --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq" \
-                        rabbitmq:3-management \
-                        bash -c 'ls -lan /var/lib/rabbitmq'
-
-                    echo "=== PIPELINE IDENTITY ==="
-                    id
-                    hostname
-                    pwd
-                    echo "WORKSPACE=$WORKSPACE"
-
-                    echo "=== DOCKER CONTEXT ==="
-                    docker context show
-                    docker info --format 'RootDir={{.DockerRootDir}} Driver={{.Driver}} Server={{.ServerVersion}}'
-
-                    echo "=== VOLUME BEFORE RABBITMQ START ==="
-                    docker volume inspect "$RABBITMQ_VOLUME"
-
-                    echo "=== VOLUME CONTENTS BEFORE RABBITMQ START ==="
-                    docker run --rm                         --user root                         --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq"                         rabbitmq:3-management                         bash -c '
-                            echo "DIRECTORY:"
-                            stat -c "%A %a %u:%g %n" /var/lib/rabbitmq
-                            echo "CONTENTS:"
-                            ls -lan /var/lib/rabbitmq
-                        '
-
                     echo "=== Starting RabbitMQ ==="
-
                     docker run -d \
                         --name "$RABBITMQ_CONTAINER" \
                         --network "$RABBITMQ_NETWORK" \
                         --network-alias rabbitmq \
                         --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq" \
+                        -e RABBITMQ_ERLANG_COOKIE="ci-cookie-for-jenkins-rabbitmq" \
                         -e RABBITMQ_DEFAULT_USER="$RABBITMQ_USER" \
                         -e RABBITMQ_DEFAULT_PASS="$RABBITMQ_PASSWORD" \
                         rabbitmq:3-management
-
-                    echo "=== IMMEDIATE RABBITMQ STATUS ==="
-                    docker inspect "$RABBITMQ_CONTAINER"                         --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} Error={{.State.Error}}'
-
-                    echo "=== IMMEDIATE VOLUME CONTENTS ==="
-                    docker run --rm                         --user root                         --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq"                         rabbitmq:3-management                         bash -c '
-                            echo "DIRECTORY:"
-                            stat -c "%A %a %u:%g %n" /var/lib/rabbitmq
-                            echo "CONTENTS:"
-                            ls -lan /var/lib/rabbitmq || true
-                            echo "COOKIE:"
-                            if [ -e /var/lib/rabbitmq/.erlang.cookie ]; then
-                                stat -c "%A %a %u:%g %n" /var/lib/rabbitmq/.erlang.cookie
-                            else
-                                echo "COOKIE DOES NOT EXIST"
-                            fi
-                        '
 
                     echo "=== Waiting for RabbitMQ to become ready ==="
 
                     READY=false
 
                     for i in $(seq 1 60); do
-
                         if docker exec "$RABBITMQ_CONTAINER" \
                             rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
-
                             echo "RabbitMQ is ready."
                             READY=true
                             break
@@ -133,7 +77,6 @@ pipeline {
 
                         if ! docker ps --format '{{.Names}}' | \
                             grep -q "^${RABBITMQ_CONTAINER}$"; then
-
                             echo "ERROR: RabbitMQ container stopped unexpectedly."
                             echo "=== RabbitMQ logs ==="
                             docker logs "$RABBITMQ_CONTAINER" || true
@@ -152,18 +95,19 @@ pipeline {
                     fi
 
                     echo "=== RabbitMQ health check ==="
+                    docker exec "$RABBITMQ_CONTAINER" rabbitmq-diagnostics -q ping
 
-                    docker exec "$RABBITMQ_CONTAINER" \
-                        rabbitmq-diagnostics -q ping
+                    echo "=== RabbitMQ listeners ==="
+                    docker exec "$RABBITMQ_CONTAINER" rabbitmq-diagnostics -q listeners
+
+                    echo "=== RabbitMQ users ==="
+                    docker exec "$RABBITMQ_CONTAINER" rabbitmqctl list_users
 
                     echo "RabbitMQ startup completed successfully."
                 '''
             }
         }
 
-        // =========================================================
-        // START POSTGRESQL
-        // =========================================================
         stage('Start PostgreSQL') {
             steps {
                 sh '''
