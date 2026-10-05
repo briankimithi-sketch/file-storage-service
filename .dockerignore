@@ -1,0 +1,11 @@
+.git
+.gitignore
+.github
+.idea
+.vscode
+target/*.original
+src
+uploads
+Jenkinsfile.backup
+Jenkinsfile.backup-before-rabbitmq-fix
+*.log
