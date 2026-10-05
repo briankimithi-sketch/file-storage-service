@@ -69,7 +69,7 @@ pipeline {
 
                     for i in $(seq 1 60); do
                         if docker exec "$RABBITMQ_CONTAINER" \
-                            rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+                            rabbitmq-diagnostics -q check_port_connectivity >/dev/null 2>&1; then
                             echo "RabbitMQ is ready."
                             READY=true
                             break
@@ -95,7 +95,7 @@ pipeline {
                     fi
 
                     echo "=== RabbitMQ health check ==="
-                    docker exec "$RABBITMQ_CONTAINER" rabbitmq-diagnostics -q ping
+                    docker exec "$RABBITMQ_CONTAINER" rabbitmq-diagnostics -q check_running
 
                     echo "=== RabbitMQ listeners ==="
                     docker exec "$RABBITMQ_CONTAINER" rabbitmq-diagnostics -q listeners
