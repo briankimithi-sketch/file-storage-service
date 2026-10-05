@@ -72,6 +72,30 @@ pipeline {
                     echo "=== Creating fresh RabbitMQ volume ==="
                     docker volume create "$RABBITMQ_VOLUME"
 
+                    echo "=== Preparing RabbitMQ volume permissions ==="
+                    docker run --rm \
+                        --user root \
+                        --mount "source=$RABBITMQ_VOLUME,target=/var/lib/rabbitmq" \
+                        rabbitmq:3-management \
+                        bash -c '
+                            set -e
+
+                            mkdir -p /var/lib/rabbitmq
+
+                            printf "%s" "ci-cookie-for-jenkins-rabbitmq" \
+                                > /var/lib/rabbitmq/.erlang.cookie
+
+                            chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
+                            chmod 400 /var/lib/rabbitmq/.erlang.cookie
+
+                            chown -R rabbitmq:rabbitmq /var/lib/rabbitmq
+
+                            chmod 755 /var/lib/rabbitmq
+
+                            echo "RabbitMQ volume permissions prepared."
+                            ls -lan /var/lib/rabbitmq
+                        '
+
                     echo "=== Starting RabbitMQ ==="
                     docker run -d \
                         --name "$RABBITMQ_CONTAINER" \
