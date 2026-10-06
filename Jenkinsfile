@@ -39,8 +39,8 @@ pipeline {
         RUNTIME_POSTGRES_USER     = 'postgres'
         RUNTIME_POSTGRES_PASSWORD = 'brian'
 
-        RUNTIME_RABBITMQ_USER     = 'guest'
-        RUNTIME_RABBITMQ_PASSWORD = 'guest'
+        RUNTIME_RABBITMQ_USER     = 'runtimeuser'
+        RUNTIME_RABBITMQ_PASSWORD = 'runtimepassword'
 
         RUNTIME_BACKEND_PORT      = '8082'
     }
