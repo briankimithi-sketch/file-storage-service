@@ -179,7 +179,7 @@ pipeline {
                         --name "$POSTGRES_CONTAINER" \
                         --network "$RABBITMQ_NETWORK" \
                         --network-alias postgres \
-                        --mount "source=$POSTGRES_VOLUME,target=/var/lib/postgresql" \
+                        --mount "source=$POSTGRES_VOLUME,target=/var/lib/postgresql/data" \
                         -e POSTGRES_DB="$POSTGRES_DB" \
                         -e POSTGRES_USER="$POSTGRES_USER" \
                         -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
