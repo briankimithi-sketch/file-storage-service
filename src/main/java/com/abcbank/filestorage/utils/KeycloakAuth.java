@@ -3,16 +3,14 @@ package com.abcbank.filestorage.utils;
 import com.abcbank.filestorage.dto.AccessTokenDto;
 import com.abcbank.filestorage.dto.AuthTokenResponse;
 import com.abcbank.filestorage.exceptions.AuthenticationFailedException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -24,10 +22,15 @@ public class KeycloakAuth {
     @Value("${config.params.keycloak.client-id}")
     private String keyCloakClientId;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final KeycloakTokenClient keycloakTokenClient;
+
+    public KeycloakAuth(KeycloakTokenClient keycloakTokenClient) {
+        this.keycloakTokenClient = keycloakTokenClient;
+    }
 
     public AccessTokenDto getAuthToken(String username, String password) {
-        log.info("Getting keycloak access token");
+
+        log.info("Requesting Keycloak access token");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -38,22 +41,23 @@ public class KeycloakAuth {
         map.add("password", password);
         map.add("grant_type", "password");
 
-        try {
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-            ResponseEntity<AuthTokenResponse> response =
-                restTemplate.postForEntity(keyCloakEndpoint, request, AuthTokenResponse.class);
+        HttpEntity<MultiValueMap<String, String>> request =
+                new HttpEntity<>(map, headers);
 
-            AuthTokenResponse body = response.getBody();
-            if (body == null || body.getAccessToken() == null) {
-                throw new AuthenticationFailedException("Keycloak returned empty token response");
-            }
+        AuthTokenResponse body = keycloakTokenClient.requestToken(
+                keyCloakEndpoint,
+                request
+        );
 
-            return new AccessTokenDto(body.getAccessToken());
-        } catch (AuthenticationFailedException e) {
-            throw e;
-        } catch(Exception e) {
-            log.error("Failed to get auth token from Keycloak", e);
-            throw new AuthenticationFailedException("Authentication failed: " + e.getMessage());
+        if (body == null || body.getAccessToken() == null
+                || body.getAccessToken().isBlank()) {
+            throw new AuthenticationFailedException(
+                    "Keycloak returned an empty token response"
+            );
         }
+
+        log.info("Keycloak authentication successful");
+
+        return new AccessTokenDto(body.getAccessToken());
     }
 }

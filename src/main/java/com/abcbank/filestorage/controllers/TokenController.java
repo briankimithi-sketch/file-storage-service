@@ -7,6 +7,7 @@ import com.abcbank.filestorage.exceptions.AuthenticationFailedException;
 import com.abcbank.filestorage.utils.KeycloakAuth;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,7 +27,7 @@ public class TokenController {
     private final KeycloakAuth keycloakAuth;
 
     @PostMapping("/auth-token")
-    public ResponseEntity<AccessTokenDto> getAuthToken(@RequestBody UserPassDto userPass) {
+    public ResponseEntity<AccessTokenDto> getAuthToken(@Valid @RequestBody UserPassDto userPass) {
         AccessTokenDto token = keycloakAuth.getAuthToken(userPass.getUsername(), userPass.getPassword());
         return ResponseEntity.ok(token);
     }
