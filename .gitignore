@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Added local backup and configuration exclusions
+# Local backups
+*.bak
+*.backup
+Jenkinsfile.backup*
+keycloak-data-backup/
+test-backups/
+# Local configuration
+src/main/resources/application-local.properties
