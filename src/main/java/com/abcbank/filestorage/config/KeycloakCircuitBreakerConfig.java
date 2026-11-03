@@ -3,6 +3,8 @@ package com.abcbank.filestorage.config;
 import com.abcbank.filestorage.exceptions.AuthenticationFailedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.context.annotation.Bean;
@@ -44,5 +46,57 @@ public class KeycloakCircuitBreakerConfig {
                 .build();
 
         return CircuitBreaker.of("keycloak", config);
+    }
+
+    @Bean
+    public MeterBinder keycloakCircuitBreakerMetrics(
+            CircuitBreaker keycloakCircuitBreaker) {
+
+        return registry -> {
+            Gauge.builder("keycloak.circuitbreaker.failure.rate",
+                    keycloakCircuitBreaker,
+                    cb -> cb.getMetrics().getFailureRate())
+                    .description("Keycloak circuit-breaker failure rate percentage")
+                    .register(registry);
+
+            Gauge.builder("keycloak.circuitbreaker.buffered.calls",
+                    keycloakCircuitBreaker,
+                    cb -> cb.getMetrics().getNumberOfBufferedCalls())
+                    .description("Number of calls in the circuit-breaker sliding window")
+                    .register(registry);
+
+            Gauge.builder("keycloak.circuitbreaker.failed.calls",
+                    keycloakCircuitBreaker,
+                    cb -> cb.getMetrics().getNumberOfFailedCalls())
+                    .description("Number of failed calls recorded by the circuit breaker")
+                    .register(registry);
+
+            Gauge.builder("keycloak.circuitbreaker.not.permitted.calls",
+                    keycloakCircuitBreaker,
+                    cb -> cb.getMetrics().getNumberOfNotPermittedCalls())
+                    .description("Number of calls rejected while the circuit breaker is open")
+                    .register(registry);
+
+            Gauge.builder("keycloak.circuitbreaker.state",
+                    keycloakCircuitBreaker,
+                    cb -> cb.getState() == CircuitBreaker.State.CLOSED ? 1 : 0)
+                    .tag("state", "closed")
+                    .description("Whether the Keycloak circuit breaker is closed")
+                    .register(registry);
+
+            Gauge.builder("keycloak.circuitbreaker.state",
+                    keycloakCircuitBreaker,
+                    cb -> cb.getState() == CircuitBreaker.State.OPEN ? 1 : 0)
+                    .tag("state", "open")
+                    .description("Whether the Keycloak circuit breaker is open")
+                    .register(registry);
+
+            Gauge.builder("keycloak.circuitbreaker.state",
+                    keycloakCircuitBreaker,
+                    cb -> cb.getState() == CircuitBreaker.State.HALF_OPEN ? 1 : 0)
+                    .tag("state", "half_open")
+                    .description("Whether the Keycloak circuit breaker is half-open")
+                    .register(registry);
+        };
     }
 }
