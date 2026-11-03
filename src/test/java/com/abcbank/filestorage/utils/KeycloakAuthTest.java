@@ -16,7 +16,7 @@ import static org.mockito.Mockito.*;
 
 class KeycloakAuthTest {
 
-    private KeycloakTokenClient tokenClient;
+    private KeycloakTokenService tokenService;
     private KeycloakAuth keycloakAuth;
 
     private static final String ENDPOINT =
@@ -24,8 +24,8 @@ class KeycloakAuthTest {
 
     @BeforeEach
     void setUp() {
-        tokenClient = mock(KeycloakTokenClient.class);
-        keycloakAuth = new KeycloakAuth(tokenClient);
+        tokenService = mock(KeycloakTokenService.class);
+        keycloakAuth = new KeycloakAuth(tokenService);
 
         ReflectionTestUtils.setField(
                 keycloakAuth, "keyCloakEndpoint", ENDPOINT
@@ -38,7 +38,7 @@ class KeycloakAuthTest {
 
     @Test
     void shouldReturnAccessTokenWhenAuthenticationSucceeds() {
-        when(tokenClient.requestToken(eq(ENDPOINT), any()))
+        when(tokenService.requestToken(eq(ENDPOINT), any()))
                 .thenReturn(new AuthTokenResponse("test-access-token"));
 
         AccessTokenDto result =
@@ -47,13 +47,13 @@ class KeycloakAuthTest {
         assertNotNull(result);
         assertEquals("test-access-token", result.getAccessToken());
 
-        verify(tokenClient, times(1))
+        verify(tokenService, times(1))
                 .requestToken(eq(ENDPOINT), any());
     }
 
     @Test
     void shouldRejectEmptyTokenResponse() {
-        when(tokenClient.requestToken(eq(ENDPOINT), any()))
+        when(tokenService.requestToken(eq(ENDPOINT), any()))
                 .thenReturn(new AuthTokenResponse(""));
 
         assertThrows(
@@ -61,13 +61,13 @@ class KeycloakAuthTest {
                 () -> keycloakAuth.getAuthToken("brian", "password")
         );
 
-        verify(tokenClient, times(1))
+        verify(tokenService, times(1))
                 .requestToken(eq(ENDPOINT), any());
     }
 
     @Test
     void shouldRejectNullTokenResponse() {
-        when(tokenClient.requestToken(eq(ENDPOINT), any()))
+        when(tokenService.requestToken(eq(ENDPOINT), any()))
                 .thenReturn(null);
 
         assertThrows(
@@ -87,7 +87,7 @@ class KeycloakAuthTest {
                         null
                 );
 
-        when(tokenClient.requestToken(eq(ENDPOINT), any()))
+        when(tokenService.requestToken(eq(ENDPOINT), any()))
                 .thenThrow(exception);
 
         assertThrows(
@@ -97,7 +97,7 @@ class KeycloakAuthTest {
                 )
         );
 
-        verify(tokenClient, times(1))
+        verify(tokenService, times(1))
                 .requestToken(eq(ENDPOINT), any());
     }
 }

@@ -11,6 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import com.abcbank.filestorage.config.KeycloakCircuitBreakerConfig;
 import org.springframework.http.HttpStatus;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.test.context.ContextConfiguration;
@@ -51,7 +54,7 @@ class KeycloakAuthIntegrationTest {
             new AtomicReference<>("");
 
     @Resource
-    private KeycloakTokenClient tokenClient;
+    private KeycloakTokenService tokenService;
 
     private KeycloakAuth keycloakAuth;
 
@@ -113,7 +116,7 @@ class KeycloakAuthIntegrationTest {
         String endpoint = "http://127.0.0.1:"
                 + server.getAddress().getPort() + "/token";
 
-        keycloakAuth = new KeycloakAuth(tokenClient);
+        keycloakAuth = new KeycloakAuth(tokenService);
 
         ReflectionTestUtils.setField(
                 keycloakAuth,
@@ -171,6 +174,7 @@ class KeycloakAuthIntegrationTest {
 
     @Configuration
     @EnableRetry
+    @Import(KeycloakCircuitBreakerConfig.class)
     static class TestConfig {
 
         @Bean
@@ -183,6 +187,16 @@ class KeycloakAuthIntegrationTest {
                 RestTemplate restTemplate
         ) {
             return new KeycloakTokenClient(restTemplate);
+        }
+
+        @Bean
+        KeycloakTokenService keycloakTokenService(
+                KeycloakTokenClient tokenClient,
+                CircuitBreaker keycloakCircuitBreaker
+        ) {
+            return new KeycloakTokenService(
+                    tokenClient, keycloakCircuitBreaker
+            );
         }
     }
 }

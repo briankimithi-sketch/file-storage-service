@@ -22,10 +22,10 @@ public class KeycloakAuth {
     @Value("${config.params.keycloak.client-id}")
     private String keyCloakClientId;
 
-    private final KeycloakTokenClient keycloakTokenClient;
+    private final KeycloakTokenService keycloakTokenService;
 
-    public KeycloakAuth(KeycloakTokenClient keycloakTokenClient) {
-        this.keycloakTokenClient = keycloakTokenClient;
+    public KeycloakAuth(KeycloakTokenService keycloakTokenService) {
+        this.keycloakTokenService = keycloakTokenService;
     }
 
     public AccessTokenDto getAuthToken(String username, String password) {
@@ -44,7 +44,7 @@ public class KeycloakAuth {
         HttpEntity<MultiValueMap<String, String>> request =
                 new HttpEntity<>(map, headers);
 
-        AuthTokenResponse body = keycloakTokenClient.requestToken(
+        AuthTokenResponse body = keycloakTokenService.requestToken(
                 keyCloakEndpoint,
                 request
         );
