@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.HttpClientErrorException;
@@ -29,18 +30,19 @@ public class KeycloakTokenClient {
             ResourceAccessException.class,
             HttpServerErrorException.class
         },
-        maxAttemptsExpression = "${keycloak.retry.max-attempts:3}",
+        maxAttemptsExpression = "#{${keycloak.retry.max-attempts:3}}",
         backoff = @Backoff(
-            delayExpression = "${keycloak.retry.initial-delay:1000}",
-            multiplierExpression = "${keycloak.retry.multiplier:2}",
-            maxDelayExpression = "${keycloak.retry.max-delay:4000}"
+            delayExpression = "#{${keycloak.retry.initial-delay:1000}}",
+            multiplierExpression = "#{${keycloak.retry.multiplier:2}}",
+            maxDelayExpression = "#{${keycloak.retry.max-delay:4000}}"
         )
     )
     public AuthTokenResponse requestToken(
             String endpoint,
             HttpEntity<MultiValueMap<String, String>> request) {
 
-        log.info("Sending request to Keycloak");
+        int attempt = RetrySynchronizationManager.getContext().getRetryCount() + 1;
+        log.info("Sending request to Keycloak (attempt {})", attempt);
 
         return restTemplate.postForObject(
             endpoint,
