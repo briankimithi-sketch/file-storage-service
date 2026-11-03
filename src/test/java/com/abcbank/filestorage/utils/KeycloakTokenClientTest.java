@@ -191,4 +191,55 @@ class KeycloakTokenClientTest {
             return new KeycloakTokenClient(restTemplate);
         }
     }
+	@Test
+void shouldNotRetryUnauthorizedErrors() {
+    when(restTemplate.postForObject(
+            eq(ENDPOINT),
+            any(HttpEntity.class),
+            eq(AuthTokenResponse.class)
+    )).thenThrow(HttpClientErrorException.create(
+            HttpStatus.UNAUTHORIZED,
+            "Unauthorized",
+            null,
+            null,
+            null
+    ));
+
+    assertThrows(
+            HttpClientErrorException.class,
+            () -> tokenClient.requestToken(ENDPOINT, request)
+    );
+
+    verify(restTemplate, times(1)).postForObject(
+            eq(ENDPOINT),
+            any(HttpEntity.class),
+            eq(AuthTokenResponse.class)
+    );
+}
+
+@Test
+void shouldNotRetryForbiddenErrors() {
+    when(restTemplate.postForObject(
+            eq(ENDPOINT),
+            any(HttpEntity.class),
+            eq(AuthTokenResponse.class)
+    )).thenThrow(HttpClientErrorException.create(
+            HttpStatus.FORBIDDEN,
+            "Forbidden",
+            null,
+            null,
+            null
+    ));
+
+    assertThrows(
+            HttpClientErrorException.class,
+            () -> tokenClient.requestToken(ENDPOINT, request)
+    );
+
+    verify(restTemplate, times(1)).postForObject(
+            eq(ENDPOINT),
+            any(HttpEntity.class),
+            eq(AuthTokenResponse.class)
+    );
+}
 }
