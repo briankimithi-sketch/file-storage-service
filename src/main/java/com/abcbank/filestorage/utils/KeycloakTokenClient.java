@@ -69,8 +69,14 @@ public class KeycloakTokenClient {
             String endpoint,
             HttpEntity<MultiValueMap<String, String>> request) {
 
-        log.error("Keycloak request failed: {}",
-                exception.getMessage());
+        log.error(
+            "Keycloak retries exhausted. Exception type: {}, Cause type: {}",
+            exception.getClass().getName(),
+            exception.getCause() != null
+                ? exception.getCause().getClass().getName()
+                : "none",
+            exception
+        );
 
         throw new AuthenticationFailedException(
             "Unable to complete authentication with Keycloak",
