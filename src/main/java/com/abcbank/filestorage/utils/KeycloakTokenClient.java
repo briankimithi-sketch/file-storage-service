@@ -3,15 +3,11 @@ package com.abcbank.filestorage.utils;
 import com.abcbank.filestorage.dto.AuthTokenResponse;
 import com.abcbank.filestorage.exceptions.AuthenticationFailedException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
-import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -21,66 +17,74 @@ public class KeycloakTokenClient {
 
     private final RestTemplate restTemplate;
 
+    @Value("${keycloak.retry.max-attempts:3}")
+    private int maxAttempts;
+
+    @Value("${keycloak.retry.initial-delay:1000}")
+    private long initialDelay;
+
+    @Value("${keycloak.retry.multiplier:2}")
+    private double multiplier;
+
+    @Value("${keycloak.retry.max-delay:4000}")
+    private long maxDelay;
+
     public KeycloakTokenClient(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
-    @Retryable(
-        retryFor = {
-            ResourceAccessException.class,
-            HttpServerErrorException.class
-        },
-        maxAttemptsExpression = "#{${keycloak.retry.max-attempts:3}}",
-        backoff = @Backoff(
-            delayExpression = "#{${keycloak.retry.initial-delay:1000}}",
-            multiplierExpression = "#{${keycloak.retry.multiplier:2}}",
-            maxDelayExpression = "#{${keycloak.retry.max-delay:4000}}"
-        )
-    )
     public AuthTokenResponse requestToken(
             String endpoint,
             HttpEntity<MultiValueMap<String, String>> request) {
 
-        int attempt = RetrySynchronizationManager.getContext().getRetryCount() + 1;
-        log.info("Sending request to Keycloak (attempt {})", attempt);
+        if (maxAttempts < 1) {
+            throw new IllegalStateException(
+                    "Keycloak retry max-attempts must be at least 1");
+        }
 
-        return restTemplate.postForObject(
-            endpoint,
-            request,
-            AuthTokenResponse.class
-        );
-    }
+        int attempt = 1;
+        long delay = initialDelay;
 
-    @Recover
-    public AuthTokenResponse recover(
-            HttpClientErrorException exception,
-            String endpoint,
-            HttpEntity<MultiValueMap<String, String>> request) {
+        while (attempt <= maxAttempts) {
+            try {
+                log.info("Sending request to Keycloak (attempt {}/{})",
+                        attempt, maxAttempts);
 
-        log.error("Keycloak rejected authentication request: {}",
-                exception.getMessage());
+                return restTemplate.postForObject(
+                        endpoint, request, AuthTokenResponse.class);
 
-        throw exception;
-    }
+            } catch (ResourceAccessException | HttpServerErrorException exception) {
 
-    @Recover
-    public AuthTokenResponse recover(
-            Exception exception,
-            String endpoint,
-            HttpEntity<MultiValueMap<String, String>> request) {
+                if (attempt == maxAttempts) {
+                    log.error("Keycloak request failed after {} attempts",
+                            attempt, exception);
 
-        log.error(
-            "Keycloak retries exhausted. Exception type: {}, Cause type: {}",
-            exception.getClass().getName(),
-            exception.getCause() != null
-                ? exception.getCause().getClass().getName()
-                : "none",
-            exception
-        );
+                    throw new AuthenticationFailedException(
+                            "Unable to complete authentication with Keycloak after "
+                                    + attempt + " attempts",
+                            exception);
+                }
 
-        throw new AuthenticationFailedException(
-            "Unable to complete authentication with Keycloak",
-            exception
-        );
+                log.warn(
+                        "Keycloak request failed on attempt {}. Retrying in {} ms. Cause: {}",
+                        attempt, delay, exception.getMessage());
+
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+
+                    throw new AuthenticationFailedException(
+                            "Interrupted while waiting to retry Keycloak request",
+                            interruptedException);
+                }
+
+                attempt++;
+                delay = Math.min(maxDelay, Math.round(delay * multiplier));
+            }
+        }
+
+        throw new IllegalStateException(
+                "Keycloak retry loop terminated unexpectedly");
     }
 }

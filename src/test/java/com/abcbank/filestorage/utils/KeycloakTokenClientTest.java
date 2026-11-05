@@ -13,7 +13,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.http.HttpStatus;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -176,7 +175,6 @@ class KeycloakTokenClientTest {
     }
 
     @Configuration
-    @EnableRetry
     static class TestConfig {
 
         @Bean
