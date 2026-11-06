@@ -8,6 +8,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
@@ -49,7 +50,10 @@ public class KeycloakTokenClient {
             );
         }
 
-        log.info("Sending request to Keycloak");
+        log.info(
+            "Sending request to Keycloak. Retry count: {}",
+            RetrySynchronizationManager.getContext().getRetryCount()
+        );
         return restTemplate.postForObject(
             endpoint,
             request,
