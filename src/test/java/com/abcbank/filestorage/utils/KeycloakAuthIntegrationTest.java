@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import com.abcbank.filestorage.config.KeycloakCircuitBreakerConfig;
 import org.springframework.http.HttpStatus;
+import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -172,6 +173,7 @@ class KeycloakAuthIntegrationTest {
     }
 
     @Configuration
+    @EnableRetry
     @Import(KeycloakCircuitBreakerConfig.class)
     static class TestConfig {
 

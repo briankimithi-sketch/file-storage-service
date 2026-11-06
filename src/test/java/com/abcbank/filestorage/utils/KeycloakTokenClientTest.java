@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -175,6 +176,7 @@ class KeycloakTokenClientTest {
     }
 
     @Configuration
+    @EnableRetry
     static class TestConfig {
 
         @Bean
